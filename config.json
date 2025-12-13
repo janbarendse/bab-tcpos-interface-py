@@ -1,0 +1,16 @@
+{
+    "pos": {
+        "name": "tcpos",
+        "transactions_folder": "D:\\proyectosPython\\vanessa tcpos printer\\printer_hub\\2xmls"
+    },
+    "printer": {
+        "name": "cts310ii"
+    },
+    "client": {
+        "NKF": "1234567890123456789"
+    },
+    "miscellaneous": {
+        "default_client_name": "Regular client",
+        "default_client_crib": "1000000000"
+    }
+}

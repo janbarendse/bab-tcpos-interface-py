@@ -1,0 +1,941 @@
+{
+    "a7ac7e18-7a81-4a04-ba57-30e60aa5f368": {
+        "@objectType": "a7ac7e18-7a81-4a04-ba57-30e60aa5f368",
+        "@version": "2",
+        "data": {
+            "@objectType": "TCPOS.FrontEnd.BusinessLogic.Transaction",
+            "@BookkeepingDate": "20241004",
+            "@CashierID": "1",
+            "@GUID": "4339D009F2534461963F90D9ADE01C3D",
+            "@MaxCheckAgeResult": "1000",
+            "@SoftwareVersion": "8.0.7.669",
+            "@TransNum": "50",
+            "@_NF525DocumentNumber": "4",
+            "@closed": "true",
+            "@creationTillID": "15",
+            "@creationTimestamp": "20241004T180501",
+            "@itemID": "1092",
+            "@operatorID": "1",
+            "@tillID": "15",
+            "@total": "5.5",
+            "@transDate": "20241004T180619",
+            "@vatIndex": "1",
+            "SignatureDataInvoice": {
+                "@objectType": "TCPOS.FrontEnd.BusinessLogic.Transaction_x002B_SignatureData"
+            },
+            "VatDetails": {
+                "@genericType": "List",
+                "@genericArgument": "TCPOS.FrontEnd.BusinessLogic.VatDetail",
+                "TCPOS.FrontEnd.BusinessLogic.VatDetail": [
+                    {
+                        "@objectType": "TCPOS.FrontEnd.BusinessLogic.VatDetail",
+                        "@CentFactor": "0.01",
+                        "@GrossAmount": "5",
+                        "Data": {
+                            "@objectType": "DbVat-90789205-49e1-4930-a813-afbe2351f655",
+                            "@Code": "1",
+                            "@Description": "Vat 9%",
+                            "@ID": "1",
+                            "@Percent": "9",
+                            "@VisibilityCriteriaId": "1"
+                        },
+                        "vatCalculator": {
+                            "@objectType": "TCPOS.FrontEnd.BusinessLogic.VATs.VatCalculator"
+                        }
+                    },
+                    {
+                        "@objectType": "TCPOS.FrontEnd.BusinessLogic.VatDetail",
+                        "@CentFactor": "0.01",
+                        "@GrossAmount": "1",
+                        "Data": {
+                            "@objectType": "DbVat-90789205-49e1-4930-a813-afbe2351f655",
+                            "@Percent": "100"
+                        },
+                        "vatCalculator": {
+                            "@objectType": "TCPOS.FrontEnd.BusinessLogic.VATs.VatCalculator"
+                        }
+                    }
+                ]
+            },
+            "_locker": {
+                "@objectType": "System.Object"
+            },
+            "_printCounters": {
+                "@genericType": "Dictionary",
+                "@genericArgument1": "PrintDocType-bde2d723-6cb4-406d-b249-074a5447b8ed",
+                "@genericArgument2": "System.Int32",
+                "keys": {
+                    "@genericType": "List",
+                    "@genericArgument": "PrintDocType-bde2d723-6cb4-406d-b249-074a5447b8ed",
+                    "PrintDocType-bde2d723-6cb4-406d-b249-074a5447b8ed": [
+                        {
+                            "@objectType": "PrintDocType-bde2d723-6cb4-406d-b249-074a5447b8ed",
+                            "@objectValue": "Undefined"
+                        },
+                        {
+                            "@objectType": "PrintDocType-bde2d723-6cb4-406d-b249-074a5447b8ed",
+                            "@objectValue": "TransactionBill"
+                        },
+                        {
+                            "@objectType": "PrintDocType-bde2d723-6cb4-406d-b249-074a5447b8ed",
+                            "@objectValue": "Receipt"
+                        },
+                        {
+                            "@objectType": "PrintDocType-bde2d723-6cb4-406d-b249-074a5447b8ed",
+                            "@objectValue": "ExpenseNote"
+                        },
+                        {
+                            "@objectType": "PrintDocType-bde2d723-6cb4-406d-b249-074a5447b8ed",
+                            "@objectValue": "Invoice"
+                        }
+                    ]
+                },
+                "values": {
+                    "@genericType": "List",
+                    "@genericArgument": "System.Int32",
+                    "System.Int32": [
+                        {
+                            "@objectType": "System.Int32",
+                            "@objectValue": "0"
+                        },
+                        {
+                            "@objectType": "System.Int32",
+                            "@objectValue": "1"
+                        },
+                        {
+                            "@objectType": "System.Int32",
+                            "@objectValue": "0"
+                        },
+                        {
+                            "@objectType": "System.Int32",
+                            "@objectValue": "0"
+                        },
+                        {
+                            "@objectType": "System.Int32",
+                            "@objectValue": "0"
+                        }
+                    ]
+                }
+            },
+            "pricelevel": {
+                "@objectType": "DbPricelevel-90ed2417-3898-4392-a46a-40e0ccaf3c53",
+                "@Code": "2",
+                "@Description": "Ticino pricelevel",
+                "@ID": "2",
+                "@TaxMode": "Any",
+                "@VisibilityCriteriaID": "2"
+            },
+            "subItems": {
+                "@genericType": "List",
+                "@genericArgument": "TCPOS.FrontEnd.BusinessLogic.TransItem",
+                "TCPOS.FrontEnd.BusinessLogic.TransArticle": [
+                    {
+                        "@objectType": "TCPOS.FrontEnd.BusinessLogic.TransArticle",
+                        "@DefaultUOMFactor": "1",
+                        "@ValueOfRevertableQuantity": "1",
+                        "@_usedPricelevelID": "2",
+                        "@_vatId": "1",
+                        "@_vatPercent": "9",
+                        "@creationTillID": "15",
+                        "@creationTimestamp": "20241004T180506",
+                        "@itemID": "1093",
+                        "@operatorID": "1",
+                        "@printedStatus": "Analyzed",
+                        "@quantityWithPrecision": "1",
+                        "@seatNumber": "",
+                        "@tillID": "15",
+                        "Data": {
+                            "@objectType": "DbArticle-db709ab2-6383-4f5a-b96d-bc7338239f55",
+                            "@Code": "2008",
+                            "@Description": "Cappuccino",
+                            "@GroupAID": "6",
+                            "@ID": "83",
+                            "@ImagePosition": "4",
+                            "@MeasureUnitID": "1",
+                            "@Vat1ID": "1",
+                            "@VisibilityCriteriaID": "1",
+                            "@allowedPrepayModes": "PreCollectedVAT",
+                            "otherFields": {
+                                "@genericType": "List",
+                                "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": [
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "ABC_GROUP_ID",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "6"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_IS_PERCENTAGE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_TYPE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "IS_SUPPLEMENT",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "VISIBILITY_CRITERIA_CODE",
+                                        "fieldValue": {
+                                            "@objectType": "System.String",
+                                            "@objectValue": "1"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "PopupLayerOverrides": {
+                            "@objectType": "DbArticlePopuplayerOverride-b8d56c2d-1e36-44e6-9882-9814a85588d8_x005B__x005D_",
+                            "@length": "0"
+                        },
+                        "PopupLayers": {
+                            "@objectType": "DbArticlePopuplayer-47dee526-f0ba-45f1-a382-91efe4a75b50b_x005B__x005D_",
+                            "@length": "0"
+                        },
+                        "measureUnit": {
+                            "@objectType": "DbMeasureUnit-200dcb20-b4a9-4ead-b40e-d81488d317ae",
+                            "@Code": "pcs",
+                            "@Description": "Pieces",
+                            "@ID": "1",
+                            "@InputFactor": "1",
+                            "@IsValid": "true",
+                            "@MaxValue": "9999999",
+                            "@ShortDescription": "pcs",
+                            "@Type": "Count",
+                            "otherFields": {
+                                "@genericType": "List",
+                                "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": {
+                                    "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                    "@Name": "IS_STANDARD",
+                                    "fieldValue": {
+                                        "@objectType": "System.Int32",
+                                        "@objectValue": "1"
+                                    }
+                                }
+                            }
+                        },
+                        "prices": {
+                            "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1_x005B__x005D_",
+                            "@length": "2",
+                            "index_0": {
+                                "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1",
+                                "@ArticleID": "83",
+                                "@ID": "126",
+                                "@Price": "1.8",
+                                "@priceLevelIsGlobal": "false",
+                                "@priceLevelPriority": "0",
+                                "@pricelevelCode": "2",
+                                "@pricelevelId": "2"
+                            },
+                            "index_1": {
+                                "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1",
+                                "@ArticleID": "83",
+                                "@ID": "125",
+                                "@Price": "2.25",
+                                "@priceLevelIsGlobal": "true",
+                                "@priceLevelPriority": "-2147483648",
+                                "@pricelevelCode": "1",
+                                "@pricelevelId": "1"
+                            }
+                        }
+                    },
+                    {
+                        "@objectType": "TCPOS.FrontEnd.BusinessLogic.TransArticle",
+                        "@DefaultUOMFactor": "1",
+                        "@ValueOfRevertableQuantity": "1",
+                        "@_usedPricelevelID": "2",
+                        "@_vatId": "1",
+                        "@_vatPercent": "9",
+                        "@creationTillID": "15",
+                        "@creationTimestamp": "20241004T180507",
+                        "@itemID": "1104",
+                        "@operatorID": "1",
+                        "@printedStatus": "Analyzed",
+                        "@quantityWithPrecision": "1",
+                        "@seatNumber": "",
+                        "@tillID": "15",
+                        "Data": {
+                            "@objectType": "DbArticle-db709ab2-6383-4f5a-b96d-bc7338239f55",
+                            "@Code": "2004",
+                            "@Description": "Coca-Cola",
+                            "@GroupAID": "6",
+                            "@ID": "78",
+                            "@ImagePosition": "4",
+                            "@MeasureUnitID": "1",
+                            "@Vat1ID": "1",
+                            "@VisibilityCriteriaID": "1",
+                            "@allowedPrepayModes": "PreCollectedVAT",
+                            "otherFields": {
+                                "@genericType": "List",
+                                "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": [
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "ABC_GROUP_ID",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "6"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_IS_PERCENTAGE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_TYPE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "IS_SUPPLEMENT",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "VISIBILITY_CRITERIA_CODE",
+                                        "fieldValue": {
+                                            "@objectType": "System.String",
+                                            "@objectValue": "1"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "DiscountValues": {
+                            "@genericType": "List",
+                            "@genericArgument": "DiscountValue-cdc574f5-c6e5-4c30-80ba-0cb67e208dc0",
+                            "DiscountValue-cdc574f5-c6e5-4c30-80ba-0cb67e208dc0": {
+                                "@objectType": "DiscountValue-cdc574f5-c6e5-4c30-80ba-0cb67e208dc0",
+                                "@Amount": "-0.5",
+                                "@AppliedOn": "LastArticle",
+                                "@Quantity": "1",
+                                "@TransDiscountItemID": "64424510580"
+                            }
+                        },
+                        "PopupLayerOverrides": {
+                            "@objectType": "DbArticlePopuplayerOverride-b8d56c2d-1e36-44e6-9882-9814a85588d8_x005B__x005D_",
+                            "@length": "0"
+                        },
+                        "PopupLayers": {
+                            "@objectType": "DbArticlePopuplayer-47dee526-f0ba-45f1-a382-91efe4a75b50b_x005B__x005D_",
+                            "@length": "0"
+                        },
+                        "measureUnit": {
+                            "@objectType": "DbMeasureUnit-200dcb20-b4a9-4ead-b40e-d81488d317ae",
+                            "@Code": "pcs",
+                            "@Description": "Pieces",
+                            "@ID": "1",
+                            "@InputFactor": "1",
+                            "@IsValid": "true",
+                            "@MaxValue": "9999999",
+                            "@ShortDescription": "pcs",
+                            "@Type": "Count",
+                            "otherFields": {
+                                "@genericType": "List",
+                                "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": {
+                                    "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                    "@Name": "IS_STANDARD",
+                                    "fieldValue": {
+                                        "@objectType": "System.Int32",
+                                        "@objectValue": "1"
+                                    }
+                                }
+                            }
+                        },
+                        "prices": {
+                            "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1_x005B__x005D_",
+                            "@length": "2",
+                            "index_0": {
+                                "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1",
+                                "@ArticleID": "78",
+                                "@ID": "118",
+                                "@Price": "2.5",
+                                "@priceLevelIsGlobal": "false",
+                                "@priceLevelPriority": "0",
+                                "@pricelevelCode": "2",
+                                "@pricelevelId": "2"
+                            },
+                            "index_1": {
+                                "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1",
+                                "@ArticleID": "78",
+                                "@ID": "117",
+                                "@Price": "3.2",
+                                "@priceLevelIsGlobal": "true",
+                                "@priceLevelPriority": "-2147483648",
+                                "@pricelevelCode": "1",
+                                "@pricelevelId": "1"
+                            }
+                        },
+                        "subItems": {
+                            "@genericType": "List",
+                            "@genericArgument": "TCPOS.FrontEnd.BusinessLogic.TransItem",
+                            "TCPOS.FrontEnd.BusinessLogic.TransDiscount": {
+                                "@objectType": "TCPOS.FrontEnd.BusinessLogic.TransDiscount",
+                                "@UnitDiscount": "-0.5",
+                                "@creationTillID": "15",
+                                "@creationTimestamp": "20241004T180524",
+                                "@itemID": "1140",
+                                "@maximalDiscountAmount": "-0.5",
+                                "@operatorID": "1",
+                                "@quantity": "1",
+                                "@tillID": "15",
+                                "AppliedThresholds": {
+                                    "@genericType": "List",
+                                    "@genericArgument": "TCPOS.FrontEnd.BusinessLogic.TransDiscount_x002B_AppliedThresholdItem",
+                                    "TCPOS.FrontEnd.BusinessLogic.TransDiscount_x002B_AppliedThresholdItem": {
+                                        "@objectType": "TCPOS.FrontEnd.BusinessLogic.TransDiscount_x002B_AppliedThresholdItem",
+                                        "@AmountDiscounted": "2.5",
+                                        "@DiscountAmount": "-0.5",
+                                        "@DiscountPercent": "20"
+                                    }
+                                },
+                                "Data": {
+                                    "@objectType": "DbDiscount-425d81d7-dbf8-4965-a92b-71e0d9f294d8",
+                                    "@AppliedOn": "LastArticle",
+                                    "@Code": "001",
+                                    "@Description": "Manual discount",
+                                    "@ID": "1",
+                                    "@IsValid": "true",
+                                    "@Type": "PercentDiscount",
+                                    "@VisibilityCriteriaID": "1"
+                                },
+                                "discounts": {
+                                    "@objectType": "DbDiscountValue-5387c1d3-526f-41ed-8a36-d5db28623e9d_x005B__x005D_",
+                                    "@length": "1",
+                                    "index_0": {
+                                        "@objectType": "DbDiscountValue-5387c1d3-526f-41ed-8a36-d5db28623e9d",
+                                        "@Discount": "20",
+                                        "@DiscountID": "1",
+                                        "@ID": "1",
+                                        "@Threshold": "999999999999"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "@objectType": "TCPOS.FrontEnd.BusinessLogic.TransArticle",
+                        "@DefaultUOMFactor": "1",
+                        "@ValueOfRevertableQuantity": "1",
+                        "@_usedPricelevelID": "2",
+                        "@_vatId": "1",
+                        "@_vatPercent": "9",
+                        "@creationTillID": "15",
+                        "@creationTimestamp": "20241004T180508",
+                        "@itemID": "1120",
+                        "@operatorID": "1",
+                        "@printedStatus": "Analyzed",
+                        "@quantityWithPrecision": "1",
+                        "@seatNumber": "",
+                        "@tillID": "15",
+                        "Data": {
+                            "@objectType": "DbArticle-db709ab2-6383-4f5a-b96d-bc7338239f55",
+                            "@Code": "2006",
+                            "@Description": "Coffee",
+                            "@GroupAID": "6",
+                            "@ID": "81",
+                            "@ImagePosition": "4",
+                            "@MeasureUnitID": "1",
+                            "@Vat1ID": "1",
+                            "@VisibilityCriteriaID": "1",
+                            "@allowedPrepayModes": "PreCollectedVAT",
+                            "otherFields": {
+                                "@genericType": "List",
+                                "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": [
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "ABC_GROUP_ID",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "6"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_IS_PERCENTAGE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_TYPE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "IS_SUPPLEMENT",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "VISIBILITY_CRITERIA_CODE",
+                                        "fieldValue": {
+                                            "@objectType": "System.String",
+                                            "@objectValue": "1"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "PopupLayerOverrides": {
+                            "@objectType": "DbArticlePopuplayerOverride-b8d56c2d-1e36-44e6-9882-9814a85588d8_x005B__x005D_",
+                            "@length": "0"
+                        },
+                        "PopupLayers": {
+                            "@objectType": "DbArticlePopuplayer-47dee526-f0ba-45f1-a382-91efe4a75b50b_x005B__x005D_",
+                            "@length": "0"
+                        },
+                        "measureUnit": {
+                            "@objectType": "DbMeasureUnit-200dcb20-b4a9-4ead-b40e-d81488d317ae",
+                            "@Code": "pcs",
+                            "@Description": "Pieces",
+                            "@ID": "1",
+                            "@InputFactor": "1",
+                            "@IsValid": "true",
+                            "@MaxValue": "9999999",
+                            "@ShortDescription": "pcs",
+                            "@Type": "Count",
+                            "otherFields": {
+                                "@genericType": "List",
+                                "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": {
+                                    "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                    "@Name": "IS_STANDARD",
+                                    "fieldValue": {
+                                        "@objectType": "System.Int32",
+                                        "@objectValue": "1"
+                                    }
+                                }
+                            }
+                        },
+                        "prices": {
+                            "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1_x005B__x005D_",
+                            "@length": "2",
+                            "index_0": {
+                                "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1",
+                                "@ArticleID": "81",
+                                "@ID": "122",
+                                "@Price": "1.2",
+                                "@priceLevelIsGlobal": "false",
+                                "@priceLevelPriority": "0",
+                                "@pricelevelCode": "2",
+                                "@pricelevelId": "2"
+                            },
+                            "index_1": {
+                                "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1",
+                                "@ArticleID": "81",
+                                "@ID": "121",
+                                "@Price": "1.5",
+                                "@priceLevelIsGlobal": "true",
+                                "@priceLevelPriority": "-2147483648",
+                                "@pricelevelCode": "1",
+                                "@pricelevelId": "1"
+                            }
+                        }
+                    },
+                    {
+                        "@objectType": "TCPOS.FrontEnd.BusinessLogic.TransArticle",
+                        "@DefaultUOMFactor": "1",
+                        "@ValueOfRevertableQuantity": "1",
+                        "@_enteredPrice": "0.5",
+                        "@_usedPricelevelID": "2",
+                        "@_vatId": "0",
+                        "@creationTillID": "15",
+                        "@creationTimestamp": "20241004T180619",
+                        "@entered": "Automatic",
+                        "@itemID": "1409",
+                        "@manualPrice": "true",
+                        "@operatorID": "1",
+                        "@positioning": "Bottom",
+                        "@printedStatus": "Analyzed",
+                        "@quantityWithPrecision": "1",
+                        "@seatNumber": "",
+                        "@tillID": "15",
+                        "Data": {
+                            "@objectType": "DbArticle-db709ab2-6383-4f5a-b96d-bc7338239f55",
+                            "@Code": "10002",
+                            "@Description": "Tip Automatic",
+                            "@ID": "105",
+                            "@MeasureUnitID": "1",
+                            "@Type": "NoDrawerNoTurnover",
+                            "@VisibilityCriteriaID": "1",
+                            "@shortDescription": "Tip Automatic",
+                            "otherFields": {
+                                "@genericType": "List",
+                                "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": [
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_IS_PERCENTAGE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_TYPE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "2"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_VALUE1",
+                                        "fieldValue": {
+                                            "@objectType": "System.Decimal",
+                                            "@objectValue": "5"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_VALUE2",
+                                        "fieldValue": {
+                                            "@objectType": "System.Decimal",
+                                            "@objectValue": "15"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_VALUE3",
+                                        "fieldValue": {
+                                            "@objectType": "System.Decimal",
+                                            "@objectValue": "10"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_VALUE4",
+                                        "fieldValue": {
+                                            "@objectType": "System.Decimal",
+                                            "@objectValue": "20"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "IS_SUPPLEMENT",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "VISIBILITY_CRITERIA_CODE",
+                                        "fieldValue": {
+                                            "@objectType": "System.String",
+                                            "@objectValue": "1"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "PopupLayerOverrides": {
+                            "@objectType": "DbArticlePopuplayerOverride-b8d56c2d-1e36-44e6-9882-9814a85588d8_x005B__x005D_",
+                            "@length": "0"
+                        },
+                        "PopupLayers": {
+                            "@objectType": "DbArticlePopuplayer-47dee526-f0ba-45f1-a382-91efe4a75b50b_x005B__x005D_",
+                            "@length": "0"
+                        },
+                        "customFields": {
+                            "@genericType": "List",
+                            "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                            "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": [
+                                {
+                                    "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                    "@Name": "GSTISAUTOMATIC",
+                                    "fieldValue": {
+                                        "@objectType": "System.Int32",
+                                        "@objectValue": "1"
+                                    }
+                                },
+                                {
+                                    "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                    "@Name": "GSTISPERCENTAGE",
+                                    "fieldValue": {
+                                        "@objectType": "System.Boolean",
+                                        "@objectValue": "false"
+                                    }
+                                }
+                            ]
+                        },
+                        "measureUnit": {
+                            "@objectType": "DbMeasureUnit-200dcb20-b4a9-4ead-b40e-d81488d317ae",
+                            "@Code": "pcs",
+                            "@Description": "Pieces",
+                            "@ID": "1",
+                            "@InputFactor": "1",
+                            "@IsValid": "true",
+                            "@MaxValue": "9999999",
+                            "@ShortDescription": "pcs",
+                            "@Type": "Count",
+                            "otherFields": {
+                                "@genericType": "List",
+                                "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": {
+                                    "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                    "@Name": "IS_STANDARD",
+                                    "fieldValue": {
+                                        "@objectType": "System.Int32",
+                                        "@objectValue": "1"
+                                    }
+                                }
+                            }
+                        },
+                        "prices": {
+                            "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1_x005B__x005D_",
+                            "@length": "1",
+                            "index_0": {
+                                "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1",
+                                "@ArticleID": "105",
+                                "@ID": "161",
+                                "@Price": "1",
+                                "@priceLevelIsGlobal": "false",
+                                "@priceLevelPriority": "0",
+                                "@pricelevelCode": "2",
+                                "@pricelevelId": "2"
+                            }
+                        }
+                    },
+                    {
+                        "@objectType": "TCPOS.FrontEnd.BusinessLogic.TransArticle",
+                        "@DefaultUOMFactor": "1",
+                        "@ValueOfRevertableQuantity": "1",
+                        "@_enteredPrice": "0.5",
+                        "@_usedPricelevelID": "2",
+                        "@_vatId": "0",
+                        "@creationTillID": "15",
+                        "@creationTimestamp": "20241004T180619",
+                        "@entered": "Automatic",
+                        "@itemID": "1424",
+                        "@manualPrice": "true",
+                        "@operatorID": "1",
+                        "@positioning": "Bottom",
+                        "@printedStatus": "Analyzed",
+                        "@quantityWithPrecision": "1",
+                        "@seatNumber": "",
+                        "@tillID": "15",
+                        "Data": {
+                            "@objectType": "DbArticle-db709ab2-6383-4f5a-b96d-bc7338239f55",
+                            "@Code": "10100",
+                            "@Description": "Service C",
+                            "@ID": "106",
+                            "@MeasureUnitID": "1",
+                            "@VisibilityCriteriaID": "1",
+                            "@shortDescription": "Service C",
+                            "otherFields": {
+                                "@genericType": "List",
+                                "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": [
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_AUTOMATIC_VALUE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Decimal",
+                                            "@objectValue": "10"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_IS_PERCENTAGE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "1"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_TYPE",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "1"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_VALUE1",
+                                        "fieldValue": {
+                                            "@objectType": "System.Decimal",
+                                            "@objectValue": "5"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_VALUE2",
+                                        "fieldValue": {
+                                            "@objectType": "System.Decimal",
+                                            "@objectValue": "10"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_VALUE3",
+                                        "fieldValue": {
+                                            "@objectType": "System.Decimal",
+                                            "@objectValue": "15"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "GST_VALUE4",
+                                        "fieldValue": {
+                                            "@objectType": "System.Decimal",
+                                            "@objectValue": "20"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "IS_SUPPLEMENT",
+                                        "fieldValue": {
+                                            "@objectType": "System.Int32",
+                                            "@objectValue": "0"
+                                        }
+                                    },
+                                    {
+                                        "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                        "@Name": "VISIBILITY_CRITERIA_CODE",
+                                        "fieldValue": {
+                                            "@objectType": "System.String",
+                                            "@objectValue": "1"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "PopupLayerOverrides": {
+                            "@objectType": "DbArticlePopuplayerOverride-b8d56c2d-1e36-44e6-9882-9814a85588d8_x005B__x005D_",
+                            "@length": "0"
+                        },
+                        "PopupLayers": {
+                            "@objectType": "DbArticlePopuplayer-47dee526-f0ba-45f1-a382-91efe4a75b50b_x005B__x005D_",
+                            "@length": "0"
+                        },
+                        "customFields": {
+                            "@genericType": "List",
+                            "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                            "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": [
+                                {
+                                    "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                    "@Name": "GSTISAUTOMATIC",
+                                    "fieldValue": {
+                                        "@objectType": "System.Int32",
+                                        "@objectValue": "1"
+                                    }
+                                },
+                                {
+                                    "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                    "@Name": "GSTISPERCENTAGE",
+                                    "fieldValue": {
+                                        "@objectType": "System.Boolean",
+                                        "@objectValue": "true"
+                                    }
+                                }
+                            ]
+                        },
+                        "measureUnit": {
+                            "@objectType": "DbMeasureUnit-200dcb20-b4a9-4ead-b40e-d81488d317ae",
+                            "@Code": "pcs",
+                            "@Description": "Pieces",
+                            "@ID": "1",
+                            "@InputFactor": "1",
+                            "@IsValid": "true",
+                            "@MaxValue": "9999999",
+                            "@ShortDescription": "pcs",
+                            "@Type": "Count",
+                            "otherFields": {
+                                "@genericType": "List",
+                                "@genericArgument": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9": {
+                                    "@objectType": "NonStandardField-fe555308-bcec-4dad-bd9d-2c400df601e9",
+                                    "@Name": "IS_STANDARD",
+                                    "fieldValue": {
+                                        "@objectType": "System.Int32",
+                                        "@objectValue": "1"
+                                    }
+                                }
+                            }
+                        },
+                        "prices": {
+                            "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1_x005B__x005D_",
+                            "@length": "1",
+                            "index_0": {
+                                "@objectType": "DbPrice-4f576f5c-e380-432f-b24d-3213093b04e1",
+                                "@ArticleID": "106",
+                                "@ID": "162",
+                                "@Price": "1",
+                                "@priceLevelIsGlobal": "false",
+                                "@priceLevelPriority": "0",
+                                "@pricelevelCode": "2",
+                                "@pricelevelId": "2"
+                            }
+                        }
+                    }
+                ],
+                "TCPOS.FrontEnd.BusinessLogic.TransPayment": {
+                    "@objectType": "TCPOS.FrontEnd.BusinessLogic.TransPayment",
+                    "@amount": "5.5",
+                    "@cashAmount": "5.5",
+                    "@creationTillID": "15",
+                    "@creationTimestamp": "20241004T180543",
+                    "@itemID": "1325",
+                    "@operatorID": "1",
+                    "@positioning": "BottomBottom",
+                    "@secondaryPositioning": "100",
+                    "@tillID": "15",
+                    "Data": {
+                        "@objectType": "DbPayment-b22bb99a-85a7-4974-a441-868e4dfea7d8",
+                        "@AmountInput": "AskWithDefault",
+                        "@Code": "1",
+                        "@Description": "Cash payment",
+                        "@ID": "1",
+                        "@OvertenderingAllowed": "true",
+                        "@Printer": "Bill",
+                        "@Type": "Cash"
+                    }
+                }
+            }
+        }
+    }
+}
