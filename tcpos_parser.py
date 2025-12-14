@@ -190,7 +190,8 @@ def get_sub_items(xml_json_object):
 
                         continue
 
-                discount_or_surcharge = process_discount_surcharge(item)
+                # Don't apply discount at item level - it will be applied at subtotal level
+                discount_or_surcharge = None
 
                 if "@_enteredPrice" not in item:
                     price = item['prices']['index_0']['@Price']
@@ -279,7 +280,8 @@ def get_sub_items(xml_json_object):
                     })
 
             else:
-                discount_or_surcharge = process_discount_surcharge(item)
+                # Don't apply discount at item level - it will be applied at subtotal level
+                discount_or_surcharge = None
 
                 # Extract PrintoutNotes if available
                 product_title = item['Data']['@Description']
@@ -338,6 +340,104 @@ def get_sub_items(xml_json_object):
                     "discount_percent": discount_or_surcharge['percent'] if discount_or_surcharge else "000",  # 10.50%
                 })
 
+        # Process TransMenu (combo deals/menus)
+        if "TCPOS.FrontEnd.BusinessLogic.TransMenu" in xml_json_object[transaction_uuid]['data']['subItems']:
+            menus = xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransMenu']
+            # Handle both single menu and list of menus
+            if not isinstance(menus, list):
+                menus = [menus]
+
+            for menu in menus:
+                # Get menu description and price
+                menu_description = menu['Data']['@Description']
+                menu_price = menu['prices']['index_0']['@Price']
+                menu_quantity = menu.get('@quantity', '1')
+                print_details = menu['Data'].get('@PrintDetails', 'false') == 'true'
+
+                # Extract sub-item names if PrintDetails is true
+                sub_item_names = []
+                if print_details and 'subItems' in menu:
+                    menu_items = menu['subItems']['TCPOS.FrontEnd.BusinessLogic.TransMenuItem']
+                    if not isinstance(menu_items, list):
+                        menu_items = [menu_items]
+
+                    for menu_item in menu_items:
+                        if 'subItems' in menu_item:
+                            articles = menu_item['subItems']['TCPOS.FrontEnd.BusinessLogic.TransArticle']
+                            if not isinstance(articles, list):
+                                articles = [articles]
+                            for article in articles:
+                                sub_item_names.append(article['Data']['@Description'])
+
+                # Build description lines (menu name on line 1, sub-items on lines 2 and 3)
+                line1 = menu_description  # Menu name at the top
+                line2 = ""
+                line3 = ""  # Must have content (mandatory)
+
+                if sub_item_names:
+                    # Concatenate sub-items with ", "
+                    items_text = ", ".join(sub_item_names)
+                    # Split into two lines if needed (max 48 chars per line)
+                    if len(items_text) <= 48:
+                        # Fits on one line - put on line 3 (mandatory)
+                        line3 = items_text
+                    else:
+                        # Split at comma boundary near 48 chars
+                        words = items_text.split(", ")
+                        line2_parts = []
+                        line3_parts = []
+                        current_line = 2
+                        current_length = 0
+
+                        for word in words:
+                            word_with_comma = word if word == words[-1] else word + ", "
+                            if current_line == 2:
+                                if current_length + len(word_with_comma) <= 48:
+                                    line2_parts.append(word)
+                                    current_length += len(word_with_comma)
+                                else:
+                                    current_line = 3
+                                    line3_parts.append(word)
+                                    current_length = len(word_with_comma)
+                            else:
+                                if current_length + len(word_with_comma) <= 48:
+                                    line3_parts.append(word)
+                                    current_length += len(word_with_comma)
+                                else:
+                                    break  # No more space
+
+                        line2 = ", ".join(line2_parts) if line2_parts else ""
+                        line3 = ", ".join(line3_parts) if line3_parts else ""
+
+                # Ensure line3 is never empty (mandatory field)
+                if not line3:
+                    line3 = " "  # Space character if no sub-items
+
+                # Strip negative signs for credit notes
+                menu_quantity_str = str(menu_quantity)
+                if menu_quantity_str.startswith('-'):
+                    menu_quantity_str = menu_quantity_str[1:]
+
+                menu_price_str = str(menu_price)
+                if menu_price_str.startswith('-'):
+                    menu_price_str = menu_price_str[1:]
+
+                # Add the menu as a single line item with sub-items as descriptions
+                sub_items.append({
+                    "type": "01",
+                    "extra_description_2": line1,  # Line 1 (top) - first part of sub-items
+                    "extra_description_1": line2,  # Line 2 (middle) - second part of sub-items
+                    "item_description": line3,     # Line 3 (bottom, mandatory) - menu name
+                    "product_code": menu['Data'].get('@Code', ''),
+                    "quantity": encode_float_number(menu_quantity_str, 3),
+                    "unit_price": encode_float_number(menu_price_str, 2),
+                    "unit": "Units",
+                    "tax": "1",  # Assuming tax ID 1 (9%)
+                    "discount_type": "0",
+                    "discount_amount": "000",
+                    "discount_percent": "000",
+                })
+
         logger.debug("Sub items:")
         logger.debug(json.dumps(sub_items, indent=4))
         logger.debug("Tips:")
@@ -366,6 +466,48 @@ def get_service_charge(xml_json_object):
         logger.debug(json.dumps(service, indent=4))
 
         return service
+
+    return None
+
+
+def get_discount(xml_json_object):
+    """
+    Extract transaction-level discount from TransDiscount element.
+    Returns discount object for subtotal-level application.
+    """
+    logger.debug("Getting transaction discount...")
+    try:
+        # Check if there is a transaction-level discount
+        if "TCPOS.FrontEnd.BusinessLogic.TransDiscount" in xml_json_object[transaction_uuid]['data']['subItems']:
+            discount_element = xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransDiscount']
+
+            # Extract the total discount amount (UnitDiscount)
+            discount_amount = discount_element.get('@UnitDiscount', '0')
+
+            # Strip negative sign for encoding
+            if discount_amount.startswith('-'):
+                discount_amount = discount_amount[1:]
+
+            # Check if amount is zero
+            if float(discount_amount) == 0:
+                logger.debug("Discount amount is zero, skipping")
+                return None
+
+            discount = {
+                "type": "0",  # Discount type
+                "description": discount_element['Data'].get('@Description', 'Discount'),
+                "amount": encode_float_number(discount_amount, 2),
+                "percent": "000",  # Using amount, not percent
+            }
+
+            logger.debug("Transaction discount:")
+            logger.debug(json.dumps(discount, indent=4))
+
+            return discount
+
+    except Exception as e:
+        logger.error(f"Error extracting discount: {str(e)}")
+        logger.error(traceback.format_exc())
 
     return None
 
@@ -449,6 +591,7 @@ def tcpos_parse_transaction(filename):
         payments = get_payment_details(xml_json_object)
         service_charge = get_service_charge(xml_json_object)
         service_charge = None
+        discount = get_discount(xml_json_object)
 
         # Extract TransNum (TCPOS transaction/receipt number)
         trans_num = xml_json_object[transaction_uuid]['data'].get('@TransNum', '')
@@ -476,12 +619,12 @@ def tcpos_parse_transaction(filename):
                     is_credit_note = True
                     logger.info(f"Credit note detected via StornoType: {storno_type}")
 
-        return items, payments, service_charge, tips, trans_num, is_credit_note
+        return items, payments, service_charge, tips, trans_num, is_credit_note, discount
 
     except Exception as e:
         logger.error("Error: " + str(e))
 
-    return None, None, None, None, None, False
+    return None, None, None, None, None, False, None
 
 
 def migrate_renamed_files(transactions_folder):
@@ -546,10 +689,10 @@ def files_watchdog():
                             continue  # Already processed, skip
 
                         logger.debug("File found: " + os.path.join(root, file))
-                        items, payments, service_charge, tips, trans_num, is_credit_note = tcpos_parse_transaction(os.path.join(root, file))
+                        items, payments, service_charge, tips, trans_num, is_credit_note, discount = tcpos_parse_transaction(os.path.join(root, file))
 
                         if items and payments:
-                            cts310ii.print_document(items, payments, service_charge, tips, trans_num, is_credit_note)
+                            cts310ii.print_document(items, payments, service_charge, tips, trans_num, is_credit_note, discount)
 
                             # Create marker file (keep original for TCPOS refunds)
                             with open(marker_processed, 'w') as f:

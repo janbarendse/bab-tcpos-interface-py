@@ -795,7 +795,37 @@ def close_document(reason="Completed operation"):
     return None
 
 
-def print_document(items, payments, service_charge, tips, trans_num="", is_credit_note=False):
+def add_comment(comment):
+    """
+    Adds a text line to the document as a comment.
+    Command 4A - Add comment line
+    """
+    try:
+        # Convert the comment text to hex
+        text_hex = string_to_hex(comment)
+
+        # Construct the command according to the protocol
+        code = "4A"  # Command for comment line
+        cmd = f"{STX}{code}{FS}{text_hex}{ETX}"
+
+        logger.debug(f"Adding comment: {comment}")
+
+        # Send the command to the printer
+        response = send_to_serial(cmd)
+
+        if is_success_response(response):
+            logger.debug(f"Comment added successfully")
+            return True
+        else:
+            logger.error(f"Failed to add comment, response: {response}")
+            return False
+
+    except Exception as e:
+        logger.error(f"Error while adding comment: {str(e)}")
+        return False
+
+
+def print_document(items, payments, service_charge, tips, trans_num="", is_credit_note=False, discount=None):
     try:
         config = load_config()
         # page 30 of the protocol
@@ -884,8 +914,19 @@ def print_document(items, payments, service_charge, tips, trans_num="", is_credi
 
         # time.sleep(1)
 
-        if 1:  # total
+        # Calculate SUBTOTAL first
+        if 1:
             subtotal = document_sub_or_total(string_to_hex("0"))
+
+        # Apply discount at SUBTOTAL level (after items, before total)
+        if discount:
+            discount_surcharge_service(discount)
+            logger.info(f"Applied transaction discount: {discount['description']} - {discount['amount']}")
+        else:
+            logger.debug("No transaction discount to apply")
+
+        # Now calculate TOTAL (after discount)
+        if 1:
             total = document_sub_or_total(string_to_hex("1"))
 
         # time.sleep(1)
@@ -921,6 +962,10 @@ def print_document(items, payments, service_charge, tips, trans_num="", is_credi
                 payment(tip)
 
         # time.sleep(1)
+
+        # Add TCPOS check number as a comment line before closing
+        if trans_num:
+            add_comment(f"TCPOS Check #{trans_num}")
 
         if 1:
             close_document()
