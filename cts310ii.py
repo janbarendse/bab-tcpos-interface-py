@@ -795,14 +795,22 @@ def close_document(reason="Completed operation"):
     return None
 
 
-def print_document(items, payments, service_charge, tips):
+def print_document(items, payments, service_charge, tips, trans_num="", is_credit_note=False):
     try:
         config = load_config()
         # page 30 of the protocol
+        # Use TransNum as POS reference if available
+        pos_reference = trans_num if trans_num else "1001"
+
+        # Document type: "1" = Sale, "3" = Return/Credit Note (per MHI protocol)
+        doc_type = "3" if is_credit_note else "1"
+        if is_credit_note:
+            logger.info(f"Processing CREDIT NOTE (void/refund) - TransNum: {trans_num}")
+
         fiscal_object = {
-            "type": "1",
+            "type": doc_type,  # "1" for sale, "3" for return/credit note
             "branch": "9001",
-            "POS": "1001",
+            "POS": pos_reference,  # TCPOS Transaction Number
             "customer_name": config["miscellaneous"]["default_client_name"],
             "customer_CRIB": config["miscellaneous"]["default_client_crib"],
             "NKF": config["client"]["NKF"],

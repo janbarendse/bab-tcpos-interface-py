@@ -87,6 +87,35 @@ def encode_measurement_unit(measurement_unit):
         return "Units"
 
 
+def split_printout_notes(printout_notes, max_chars=48):
+    """
+    Split printout notes into chunks of max_chars.
+    Returns tuple: (line1, line2) where each line is max 48 chars
+    Line 1 is the first part, Line 2 is the continuation
+    """
+    if not printout_notes:
+        return ("", "")
+
+    # Split into words to avoid breaking mid-word
+    words = printout_notes.split()
+    line1 = ""
+    line2 = ""
+
+    # Build line 1
+    for word in words:
+        if len(line1) + len(word) + (1 if line1 else 0) <= max_chars:
+            line1 += (" " if line1 else "") + word
+        else:
+            # Start filling line 2
+            if len(line2) + len(word) + (1 if line2 else 0) <= max_chars:
+                line2 += (" " if line2 else "") + word
+            else:
+                # Can't fit more, truncate
+                break
+
+    return (line1, line2)
+
+
 def check_file_version(xml_json_object):
     version = xml_json_object[transaction_uuid]['data']["@SoftwareVersion"]
 
@@ -169,15 +198,57 @@ def get_sub_items(xml_json_object):
                 else:
                     price = item['@_enteredPrice']
 
+                # Extract PrintoutNotes if available
+                product_title = item['Data']['@Description']
+                printout_notes = item['Data'].get('@PrintoutNotes', '')
+
+                # Smart layout strategy (lines print top to bottom: 1, 2, 3):
+                # Case 1: No notes -> Title on line 3 (mandatory)
+                # Case 2: Notes ≤48 chars -> Title on line 2, Notes on line 3
+                # Case 3: Notes >48 chars -> Title on line 1, Notes split on lines 2&3
+                if not printout_notes:
+                    # No notes: use only line 3 (mandatory)
+                    line1 = ""
+                    line2 = ""
+                    line3 = product_title
+                elif len(printout_notes) <= 48:
+                    # Short notes: title on line 2, notes on line 3
+                    line1 = ""
+                    line2 = product_title
+                    line3 = printout_notes
+                else:
+                    # Long notes: split and check if we actually got 2 lines
+                    notes_line1, notes_line2 = split_printout_notes(printout_notes)
+
+                    if notes_line2:
+                        # Two lines of notes: title on 1, notes on 2&3
+                        line1 = product_title
+                        line2 = notes_line1
+                        line3 = notes_line2
+                    else:
+                        # Split returned only one line: treat like short notes
+                        line1 = ""
+                        line2 = product_title
+                        line3 = notes_line1
+
+                # For credit notes, quantities and prices may be negative - strip minus signs
+                quantity_str = str(item['@quantityWithPrecision'])
+                if quantity_str.startswith('-'):
+                    quantity_str = quantity_str[1:]
+
+                price_str = str(price)
+                if price_str.startswith('-'):
+                    price_str = price_str[1:]
+
                 sub_items.append({
                     "type": "02" if void_item else "01",
-                    "extra_description_1": "",
-                    "extra_description_2": "",
-                    "item_description": item['Data']['@Description'],
+                    "extra_description_2": line1,  # Line 1 (top)
+                    "extra_description_1": line2,  # Line 2 (middle)
+                    "item_description": line3,     # Line 3 (bottom, mandatory)
                     "product_code": item['Data']['@Code'],
-                    "quantity": encode_float_number(item['@quantityWithPrecision'], 3),  # 2.000
+                    "quantity": encode_float_number(quantity_str, 3),  # 2.000
                     # "unit_price": encode_float_number(item['prices']['index_0']['@Price'], 2),  # 1.55
-                    "unit_price": encode_float_number(price, 2),  # 1.55
+                    "unit_price": encode_float_number(price_str, 2),  # 1.55
                     "unit": encode_measurement_unit(item['measureUnit']['@Code']),  # Units Kilos Grams Pounds Boxes
                     "tax": tax_ids[item['@_vatPercent']] if not tax_exempt else "0",  # tax id
                     "discount_type": discount_or_surcharge['type'] if discount_or_surcharge else "0",
@@ -210,14 +281,56 @@ def get_sub_items(xml_json_object):
             else:
                 discount_or_surcharge = process_discount_surcharge(item)
 
+                # Extract PrintoutNotes if available
+                product_title = item['Data']['@Description']
+                printout_notes = item['Data'].get('@PrintoutNotes', '')
+
+                # Smart layout strategy (lines print top to bottom: 1, 2, 3):
+                # Case 1: No notes -> Title on line 3 (mandatory)
+                # Case 2: Notes ≤48 chars -> Title on line 2, Notes on line 3
+                # Case 3: Notes >48 chars -> Title on line 1, Notes split on lines 2&3
+                if not printout_notes:
+                    # No notes: use only line 3 (mandatory)
+                    line1 = ""
+                    line2 = ""
+                    line3 = product_title
+                elif len(printout_notes) <= 48:
+                    # Short notes: title on line 2, notes on line 3
+                    line1 = ""
+                    line2 = product_title
+                    line3 = printout_notes
+                else:
+                    # Long notes: split and check if we actually got 2 lines
+                    notes_line1, notes_line2 = split_printout_notes(printout_notes)
+
+                    if notes_line2:
+                        # Two lines of notes: title on 1, notes on 2&3
+                        line1 = product_title
+                        line2 = notes_line1
+                        line3 = notes_line2
+                    else:
+                        # Split returned only one line: treat like short notes
+                        line1 = ""
+                        line2 = product_title
+                        line3 = notes_line1
+
+                # For credit notes, quantities and prices may be negative - strip minus signs
+                quantity_str = str(item['@quantityWithPrecision'])
+                if quantity_str.startswith('-'):
+                    quantity_str = quantity_str[1:]
+
+                price_str = str(item['prices']['index_0']['@Price'])
+                if price_str.startswith('-'):
+                    price_str = price_str[1:]
+
                 sub_items.append({
                     "type": "02" if void_item else "01",
-                    "extra_description_1": "Discount" if discount_or_surcharge else "",
-                    "extra_description_2": "",
-                    "item_description": item['Data']['@Description'],
+                    "extra_description_2": line1,  # Line 1 (top)
+                    "extra_description_1": line2,  # Line 2 (middle)
+                    "item_description": line3,     # Line 3 (bottom, mandatory)
                     "product_code": item['Data']['@Code'],
-                    "quantity": encode_float_number(item['@quantityWithPrecision'], 3),  # 2.000
-                    "unit_price": encode_float_number(item['prices']['index_0']['@Price'], 2),  # 1.55
+                    "quantity": encode_float_number(quantity_str, 3),  # 2.000
+                    "unit_price": encode_float_number(price_str, 2),  # 1.55
                     "unit": encode_measurement_unit(item['measureUnit']['@Code']),  # Units Kilos Grams Pounds Boxes
                     "tax": tax_ids[item['@_vatPercent']] if not tax_exempt else "0",  # tax id
                     "discount_type": discount_or_surcharge['type'] if discount_or_surcharge else "0",
@@ -265,19 +378,31 @@ def get_payment_details(xml_json_object):
         if type(xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransPayment']) is list:
 
             for payment in xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransPayment']:
+                # For credit notes, payment amounts are negative - strip the minus sign
+                amount_str = str(payment['@amount'])
+                if amount_str.startswith('-'):
+                    amount_str = amount_str[1:]  # Remove leading minus
+                    logger.debug(f"Credit note payment: stripped negative sign from {payment['@amount']} -> {amount_str}")
+
                 payment_details.append({
                     "type": "1",
                     "method": payment_methods[payment['Data']['@Type']],
                     "description": payment['Data']['@Type'],
-                    "amount": encode_float_number(payment['@amount'], 2),
+                    "amount": encode_float_number(amount_str, 2),
                 })
 
         elif type(xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransPayment']) is dict:
+            # For credit notes, payment amounts are negative - strip the minus sign
+            amount_str = str(xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransPayment']['@amount'])
+            if amount_str.startswith('-'):
+                amount_str = amount_str[1:]  # Remove leading minus
+                logger.debug(f"Credit note payment: stripped negative sign from {xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransPayment']['@amount']} -> {amount_str}")
+
             payment_details.append({
                 "type": "1",
                 "method": payment_methods[xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransPayment']['Data']['@Type']],
                 "description": xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransPayment']['Data']['@Type'],
-                "amount": encode_float_number(xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransPayment']['@amount'], 2),
+                "amount": encode_float_number(amount_str, 2),
             })
 
         logger.debug("Payment details:")
@@ -325,12 +450,76 @@ def tcpos_parse_transaction(filename):
         service_charge = get_service_charge(xml_json_object)
         service_charge = None
 
-        return items, payments, service_charge, tips
+        # Extract TransNum (TCPOS transaction/receipt number)
+        trans_num = xml_json_object[transaction_uuid]['data'].get('@TransNum', '')
+
+        # Check if this is a void/credit note transaction
+        # A credit note has: negative total, OR StornoType="StornoChild", OR DeleteType with negative amounts
+        is_credit_note = False
+
+        # Method 1: Check for negative total (most reliable)
+        total_str = xml_json_object[transaction_uuid]['data'].get('@total', '0')
+        try:
+            total_amount = float(total_str)
+            if total_amount < 0:
+                is_credit_note = True
+                logger.info(f"Credit note detected via negative total: {total_amount}")
+        except (ValueError, TypeError):
+            pass
+
+        # Method 2: Check for StornoChild (backup detection)
+        if not is_credit_note:
+            storno_details = xml_json_object[transaction_uuid]['data'].get('StornoDetails', {})
+            if isinstance(storno_details, dict):
+                storno_type = storno_details.get('@StornoType', '')
+                if storno_type == 'StornoChild':
+                    is_credit_note = True
+                    logger.info(f"Credit note detected via StornoType: {storno_type}")
+
+        return items, payments, service_charge, tips, trans_num, is_credit_note
 
     except Exception as e:
         logger.error("Error: " + str(e))
 
-    return None, None, None, None
+    return None, None, None, None, None, False
+
+
+def migrate_renamed_files(transactions_folder):
+    """
+    One-time migration: Convert old renamed files back to original names
+    and create marker files instead
+    """
+    for root, dirs, files in os.walk(transactions_folder):
+        for file in files:
+            # Handle .xml.processed files
+            if file.endswith('.xml.processed'):
+                original_name = file[:-10]  # Remove .processed
+                old_path = os.path.join(root, file)
+                new_path = os.path.join(root, original_name)
+                marker_path = os.path.join(root, original_name + '.processed')
+
+                # Rename back to original
+                if not os.path.exists(new_path):
+                    os.rename(old_path, new_path)
+                    # Create marker
+                    with open(marker_path, 'w') as f:
+                        f.write(f"Migrated at {time.strftime('%Y-%m-%d %H:%M:%S')}")
+                    logger.info(f"Migrated: {file} -> {original_name}")
+
+            # Handle .xml.skipped files
+            elif file.endswith('.xml.skipped'):
+                original_name = file[:-8]  # Remove .skipped
+                old_path = os.path.join(root, file)
+                new_path = os.path.join(root, original_name)
+                marker_path = os.path.join(root, original_name + '.skipped')
+
+                # Rename back to original
+                if not os.path.exists(new_path):
+                    os.rename(old_path, new_path)
+                    # Create marker
+                    with open(marker_path, 'w') as f:
+                        f.write(f"Migrated at {time.strftime('%Y-%m-%d %H:%M:%S')}")
+                    logger.info(f"Migrated: {file} -> {original_name}")
 
 
 def files_watchdog():
@@ -339,35 +528,39 @@ def files_watchdog():
     if config['printer']['name'] == 'cts310ii':
         import cts310ii
 
+    # Run one-time migration
+    logger.info("Running file migration...")
+    migrate_renamed_files(config['pos']['transactions_folder'])
+    logger.info("File migration complete")
+
     while True:
         for root, dirs, files in os.walk(config['pos']['transactions_folder']):
             for file in files:
                 try:
                     if file.endswith('.xml'):
+                        # Skip if already processed or skipped (marker file exists)
+                        marker_processed = os.path.join(root, file + '.processed')
+                        marker_skipped = os.path.join(root, file + '.skipped')
+
+                        if os.path.exists(marker_processed) or os.path.exists(marker_skipped):
+                            continue  # Already processed, skip
+
                         logger.debug("File found: " + os.path.join(root, file))
-                        items, payments, service_charge, tips = tcpos_parse_transaction(os.path.join(root, file))
+                        items, payments, service_charge, tips, trans_num, is_credit_note = tcpos_parse_transaction(os.path.join(root, file))
 
                         if items and payments:
-                            cts310ii.print_document(items, payments, service_charge, tips)
+                            cts310ii.print_document(items, payments, service_charge, tips, trans_num, is_credit_note)
 
-                            if 1:
-                                # check if file exists
-                                if os.path.exists(os.path.join(root, file + '.processed')):
-                                    os.remove(os.path.join(root, file + '.processed'))
-
-                                os.rename(
-                                    os.path.join(root, file),
-                                    os.path.join(root, f'{file}.processed')
-                                )
+                            # Create marker file (keep original for TCPOS refunds)
+                            with open(marker_processed, 'w') as f:
+                                f.write(f"Processed at {time.strftime('%Y-%m-%d %H:%M:%S')}")
                             logger.info(f"File processed: {file}")
 
                         else:
                             logger.debug("File skipped: " + os.path.join(root, file))
-                            if 1:
-                                os.rename(
-                                    os.path.join(root, file),
-                                    os.path.join(root, f'{file}.skipped')
-                                )
+                            # Create skipped marker file
+                            with open(marker_skipped, 'w') as f:
+                                f.write(f"Skipped at {time.strftime('%Y-%m-%d %H:%M:%S')}")
                             logger.info(f"File skipped: {file}")
 
                         time.sleep(1)
