@@ -893,6 +893,8 @@ def print_document(items, payments, service_charge, tips, trans_num="", is_credi
         # time.sleep(1)
 
         for item in items:
+            # Use space as product code to hide article number on printout
+            item['product_code'] = " "
             add_item_to_document(item)
 
         # time.sleep(1)

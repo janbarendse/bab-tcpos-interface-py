@@ -167,6 +167,9 @@ def get_sub_items(xml_json_object):
         logger.debug("Getting sub items...")
         sub_items = []
         tips = []
+        # Dictionary to consolidate items by product code (for handling complimentary items)
+        items_by_code = {}
+        # Process list of TransArticle items
         if type(xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransArticle']) is list:
             for item in xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransArticle']:
                 void_item = False
@@ -179,6 +182,7 @@ def get_sub_items(xml_json_object):
                 if "@_vatPercent" not in item:
                     tax_exempt = True
 
+                # Handle tips separately
                 if "@shortDescription" in item['Data']:
                     if item['Data']['@shortDescription'] == "Tip" or item['Data']['@shortDescription'] == "Tip %":
                         tips.append({
@@ -187,7 +191,6 @@ def get_sub_items(xml_json_object):
                             "description": "Tip",
                             "amount": encode_float_number(item['@_enteredPrice'], 2),
                         })
-
                         continue
 
                 # Don't apply discount at item level - it will be applied at subtotal level
@@ -195,68 +198,45 @@ def get_sub_items(xml_json_object):
 
                 if "@_enteredPrice" not in item:
                     price = item['prices']['index_0']['@Price']
-
                 else:
                     price = item['@_enteredPrice']
 
-                # Extract PrintoutNotes if available
+                # Extract product info
+                product_code = item['Data']['@Code']
                 product_title = item['Data']['@Description']
                 printout_notes = item['Data'].get('@PrintoutNotes', '')
 
-                # Smart layout strategy (lines print top to bottom: 1, 2, 3):
-                # Case 1: No notes -> Title on line 3 (mandatory)
-                # Case 2: Notes ≤48 chars -> Title on line 2, Notes on line 3
-                # Case 3: Notes >48 chars -> Title on line 1, Notes split on lines 2&3
-                if not printout_notes:
-                    # No notes: use only line 3 (mandatory)
-                    line1 = ""
-                    line2 = ""
-                    line3 = product_title
-                elif len(printout_notes) <= 48:
-                    # Short notes: title on line 2, notes on line 3
-                    line1 = ""
-                    line2 = product_title
-                    line3 = printout_notes
+                # Get quantity with sign (check for negative quantities in complimentary items)
+                # Use ValueOfRevertableQuantity if available (has the sign), otherwise quantityWithPrecision
+                if '@ValueOfRevertableQuantity' in item:
+                    quantity = float(item['@ValueOfRevertableQuantity'])
+                elif '@quantity' in item:
+                    quantity = float(item['@quantity'])
                 else:
-                    # Long notes: split and check if we actually got 2 lines
-                    notes_line1, notes_line2 = split_printout_notes(printout_notes)
+                    quantity = float(item['@quantityWithPrecision'])
 
-                    if notes_line2:
-                        # Two lines of notes: title on 1, notes on 2&3
-                        line1 = product_title
-                        line2 = notes_line1
-                        line3 = notes_line2
-                    else:
-                        # Split returned only one line: treat like short notes
-                        line1 = ""
-                        line2 = product_title
-                        line3 = notes_line1
+                unit_price = float(price)
+                total_amount = quantity * unit_price
 
-                # For credit notes, quantities and prices may be negative - strip minus signs
-                quantity_str = str(item['@quantityWithPrecision'])
-                if quantity_str.startswith('-'):
-                    quantity_str = quantity_str[1:]
+                # Store item data for consolidation by product code
+                if product_code not in items_by_code:
+                    items_by_code[product_code] = {
+                        'product_code': product_code,
+                        'product_title': product_title,
+                        'printout_notes': printout_notes,
+                        'void_item': void_item,
+                        'tax_exempt': tax_exempt,
+                        'tax_id': tax_ids[item['@_vatPercent']] if not tax_exempt else "0",
+                        'unit': encode_measurement_unit(item['measureUnit']['@Code']),
+                        'quantities': [],
+                        'amounts': [],
+                    }
 
-                price_str = str(price)
-                if price_str.startswith('-'):
-                    price_str = price_str[1:]
+                # Add this instance to the consolidation tracking
+                items_by_code[product_code]['quantities'].append(quantity)
+                items_by_code[product_code]['amounts'].append(total_amount)
 
-                sub_items.append({
-                    "type": "02" if void_item else "01",
-                    "extra_description_2": line1,  # Line 1 (top)
-                    "extra_description_1": line2,  # Line 2 (middle)
-                    "item_description": line3,     # Line 3 (bottom, mandatory)
-                    "product_code": item['Data']['@Code'],
-                    "quantity": encode_float_number(quantity_str, 3),  # 2.000
-                    # "unit_price": encode_float_number(item['prices']['index_0']['@Price'], 2),  # 1.55
-                    "unit_price": encode_float_number(price_str, 2),  # 1.55
-                    "unit": encode_measurement_unit(item['measureUnit']['@Code']),  # Units Kilos Grams Pounds Boxes
-                    "tax": tax_ids[item['@_vatPercent']] if not tax_exempt else "0",  # tax id
-                    "discount_type": discount_or_surcharge['type'] if discount_or_surcharge else "0",
-                    "discount_amount": discount_or_surcharge['amount'] if discount_or_surcharge else "000",
-                    "discount_percent": discount_or_surcharge['percent'] if discount_or_surcharge else "000",  # 10.50%
-                })
-
+        # Process single TransArticle item
         elif type(xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransArticle']) is dict:
             item = xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransArticle']
 
@@ -270,6 +250,7 @@ def get_sub_items(xml_json_object):
             if "@_vatPercent" not in item:
                 tax_exempt = True
 
+            # Handle tips separately
             if "@shortDescription" in item['Data']:
                 if item['Data']['@shortDescription'] == "Tip" or item['Data']['@shortDescription'] == "Tip %":
                     tips.append({
@@ -278,67 +259,116 @@ def get_sub_items(xml_json_object):
                         "description": "Tip",
                         "amount": encode_float_number(item['@_enteredPrice'], 2),
                     })
-
             else:
                 # Don't apply discount at item level - it will be applied at subtotal level
                 discount_or_surcharge = None
 
-                # Extract PrintoutNotes if available
+                # Extract product info
+                product_code = item['Data']['@Code']
                 product_title = item['Data']['@Description']
                 printout_notes = item['Data'].get('@PrintoutNotes', '')
 
-                # Smart layout strategy (lines print top to bottom: 1, 2, 3):
-                # Case 1: No notes -> Title on line 3 (mandatory)
-                # Case 2: Notes ≤48 chars -> Title on line 2, Notes on line 3
-                # Case 3: Notes >48 chars -> Title on line 1, Notes split on lines 2&3
-                if not printout_notes:
-                    # No notes: use only line 3 (mandatory)
-                    line1 = ""
-                    line2 = ""
-                    line3 = product_title
-                elif len(printout_notes) <= 48:
-                    # Short notes: title on line 2, notes on line 3
+                # Get quantity with sign (check for negative quantities in complimentary items)
+                # Use ValueOfRevertableQuantity if available (has the sign), otherwise quantityWithPrecision
+                if '@ValueOfRevertableQuantity' in item:
+                    quantity = float(item['@ValueOfRevertableQuantity'])
+                elif '@quantity' in item:
+                    quantity = float(item['@quantity'])
+                else:
+                    quantity = float(item['@quantityWithPrecision'])
+
+                unit_price = float(item['prices']['index_0']['@Price'])
+                total_amount = quantity * unit_price
+
+                # Store item data for consolidation by product code
+                if product_code not in items_by_code:
+                    items_by_code[product_code] = {
+                        'product_code': product_code,
+                        'product_title': product_title,
+                        'printout_notes': printout_notes,
+                        'void_item': void_item,
+                        'tax_exempt': tax_exempt,
+                        'tax_id': tax_ids[item['@_vatPercent']] if not tax_exempt else "0",
+                        'unit': encode_measurement_unit(item['measureUnit']['@Code']),
+                        'quantities': [],
+                        'amounts': [],
+                    }
+
+                # Add this instance to the consolidation tracking
+                items_by_code[product_code]['quantities'].append(quantity)
+                items_by_code[product_code]['amounts'].append(total_amount)
+
+        # Process items by product code (separate paid and comped items)
+        for product_code, item_data in items_by_code.items():
+            # Separate positive (paid) and negative (comped) quantities
+            positive_quantities = [q for q in item_data['quantities'] if q > 0]
+            negative_quantities = [q for q in item_data['quantities'] if q < 0]
+            positive_amounts = [item_data['amounts'][i] for i, q in enumerate(item_data['quantities']) if q > 0]
+
+            product_title = item_data['product_title']
+            printout_notes = item_data['printout_notes']
+
+            # Format description lines
+            if not printout_notes:
+                line1 = ""
+                line2 = ""
+                line3 = product_title
+            elif len(printout_notes) <= 48:
+                line1 = ""
+                line2 = product_title
+                line3 = printout_notes
+            else:
+                notes_line1, notes_line2 = split_printout_notes(printout_notes)
+                if notes_line2:
+                    line1 = product_title
+                    line2 = notes_line1
+                    line3 = notes_line2
+                else:
                     line1 = ""
                     line2 = product_title
-                    line3 = printout_notes
-                else:
-                    # Long notes: split and check if we actually got 2 lines
-                    notes_line1, notes_line2 = split_printout_notes(printout_notes)
+                    line3 = notes_line1
 
-                    if notes_line2:
-                        # Two lines of notes: title on 1, notes on 2&3
-                        line1 = product_title
-                        line2 = notes_line1
-                        line3 = notes_line2
-                    else:
-                        # Split returned only one line: treat like short notes
-                        line1 = ""
-                        line2 = product_title
-                        line3 = notes_line1
-
-                # For credit notes, quantities and prices may be negative - strip minus signs
-                quantity_str = str(item['@quantityWithPrecision'])
-                if quantity_str.startswith('-'):
-                    quantity_str = quantity_str[1:]
-
-                price_str = str(item['prices']['index_0']['@Price'])
-                if price_str.startswith('-'):
-                    price_str = price_str[1:]
+            # Add paid items (positive quantities) with actual price
+            if positive_quantities:
+                paid_quantity = sum(positive_quantities)
+                paid_amount = sum(positive_amounts)
+                paid_unit_price = paid_amount / paid_quantity
 
                 sub_items.append({
-                    "type": "02" if void_item else "01",
-                    "extra_description_2": line1,  # Line 1 (top)
-                    "extra_description_1": line2,  # Line 2 (middle)
-                    "item_description": line3,     # Line 3 (bottom, mandatory)
-                    "product_code": item['Data']['@Code'],
-                    "quantity": encode_float_number(quantity_str, 3),  # 2.000
-                    "unit_price": encode_float_number(price_str, 2),  # 1.55
-                    "unit": encode_measurement_unit(item['measureUnit']['@Code']),  # Units Kilos Grams Pounds Boxes
-                    "tax": tax_ids[item['@_vatPercent']] if not tax_exempt else "0",  # tax id
-                    "discount_type": discount_or_surcharge['type'] if discount_or_surcharge else "0",
-                    "discount_amount": discount_or_surcharge['amount'] if discount_or_surcharge else "000",
-                    "discount_percent": discount_or_surcharge['percent'] if discount_or_surcharge else "000",  # 10.50%
+                    "type": "02" if item_data['void_item'] else "01",
+                    "extra_description_2": line1,
+                    "extra_description_1": line2,
+                    "item_description": line3,
+                    "product_code": product_code,
+                    "quantity": encode_float_number(str(paid_quantity), 3),
+                    "unit_price": encode_float_number(str(paid_unit_price), 2),
+                    "unit": item_data['unit'],
+                    "tax": item_data['tax_id'],
+                    "discount_type": "0",
+                    "discount_amount": "000",
+                    "discount_percent": "000",
                 })
+                logger.info(f"Item {product_code} ({product_title}) - Paid: {paid_quantity}x @ {paid_unit_price}")
+
+            # Add comped items (negative quantities) as separate line with price 0
+            if negative_quantities:
+                comped_quantity = abs(sum(negative_quantities))  # Make positive for display
+
+                sub_items.append({
+                    "type": "02" if item_data['void_item'] else "01",
+                    "extra_description_2": line1,
+                    "extra_description_1": line2,
+                    "item_description": line3,
+                    "product_code": product_code,
+                    "quantity": encode_float_number(str(comped_quantity), 3),
+                    "unit_price": "000",  # Price 0.00 for comped items
+                    "unit": item_data['unit'],
+                    "tax": item_data['tax_id'],
+                    "discount_type": "0",
+                    "discount_amount": "000",
+                    "discount_percent": "000",
+                })
+                logger.info(f"Item {product_code} ({product_title}) - Comped: {comped_quantity}x @ 0.00")
 
         # Process TransMenu (combo deals/menus)
         if "TCPOS.FrontEnd.BusinessLogic.TransMenu" in xml_json_object[transaction_uuid]['data']['subItems']:
