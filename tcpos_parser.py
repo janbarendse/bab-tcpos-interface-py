@@ -601,8 +601,31 @@ def tcpos_parse_transaction(filename):
     # filename = "TIP PERCENT-Trn 19-22-28 #37"
     # filename += ".xml"
     try:
+        # Check if file exists and is not empty
+        if not os.path.exists(filename):
+            raise Exception(f"File does not exist: {filename}")
+
+        file_size = os.path.getsize(filename)
+        if file_size == 0:
+            raise Exception(f"File is empty (0 bytes): {filename}")
+
+        # Check if file is still being written to by trying to open it exclusively
+        # Wait a bit to ensure TCPOS has finished writing
+        time.sleep(0.5)
+
         with open(filename, 'r', encoding='utf-8') as xml_file:
-            xml_tree = ET.parse(xml_file)
+            # Read content first to check if it's valid
+            content = xml_file.read()
+            if not content.strip():
+                raise Exception(f"File contains no content: {filename}")
+
+            # Reset file pointer to beginning
+            xml_file.seek(0)
+
+            try:
+                xml_tree = ET.parse(xml_file)
+            except ET.ParseError as parse_err:
+                raise Exception(f"XML parse error in {filename}: {str(parse_err)}")
 
         xml_data = xml_tree.getroot()
         xmlstr = ET.tostring(xml_data, encoding='utf-8', method='xml')
