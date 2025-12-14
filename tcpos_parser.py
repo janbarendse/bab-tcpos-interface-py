@@ -215,6 +215,10 @@ def get_sub_items(xml_json_object):
                 else:
                     quantity = float(item['@quantityWithPrecision'])
 
+                # If item was voided (has deleteOperatorID), make quantity negative
+                if void_item:
+                    quantity = -abs(quantity)
+
                 unit_price = float(price)
                 total_amount = quantity * unit_price
 
@@ -277,6 +281,10 @@ def get_sub_items(xml_json_object):
                 else:
                     quantity = float(item['@quantityWithPrecision'])
 
+                # If item was voided (has deleteOperatorID), make quantity negative
+                if void_item:
+                    quantity = -abs(quantity)
+
                 unit_price = float(item['prices']['index_0']['@Price'])
                 total_amount = quantity * unit_price
 
@@ -298,9 +306,9 @@ def get_sub_items(xml_json_object):
                 items_by_code[product_code]['quantities'].append(quantity)
                 items_by_code[product_code]['amounts'].append(total_amount)
 
-        # Process items by product code (separate paid and comped items)
+        # Process items by product code (separate paid and voided items)
         for product_code, item_data in items_by_code.items():
-            # Separate positive (paid) and negative (comped) quantities
+            # Separate positive (paid) and negative (voided) quantities
             positive_quantities = [q for q in item_data['quantities'] if q > 0]
             negative_quantities = [q for q in item_data['quantities'] if q < 0]
             positive_amounts = [item_data['amounts'][i] for i, q in enumerate(item_data['quantities']) if q > 0]
@@ -350,9 +358,9 @@ def get_sub_items(xml_json_object):
                 })
                 logger.info(f"Item {product_code} ({product_title}) - Paid: {paid_quantity}x @ {paid_unit_price}")
 
-            # Add comped items (negative quantities) as separate line with price 0
+            # Add voided items (negative quantities) as separate line with price 0
             if negative_quantities:
-                comped_quantity = abs(sum(negative_quantities))  # Make positive for display
+                voided_quantity = abs(sum(negative_quantities))  # Make positive for display
 
                 sub_items.append({
                     "type": "02" if item_data['void_item'] else "01",
@@ -360,15 +368,15 @@ def get_sub_items(xml_json_object):
                     "extra_description_1": line2,
                     "item_description": line3,
                     "product_code": product_code,
-                    "quantity": encode_float_number(str(comped_quantity), 3),
-                    "unit_price": "000",  # Price 0.00 for comped items
+                    "quantity": encode_float_number(str(voided_quantity), 3),
+                    "unit_price": "000",  # Price 0.00 for voided items
                     "unit": item_data['unit'],
                     "tax": item_data['tax_id'],
                     "discount_type": "0",
                     "discount_amount": "000",
                     "discount_percent": "000",
                 })
-                logger.info(f"Item {product_code} ({product_title}) - Comped: {comped_quantity}x @ 0.00")
+                logger.info(f"Item {product_code} ({product_title}) - Voided: {voided_quantity}x @ 0.00")
 
         # Process TransMenu (combo deals/menus)
         if "TCPOS.FrontEnd.BusinessLogic.TransMenu" in xml_json_object[transaction_uuid]['data']['subItems']:
