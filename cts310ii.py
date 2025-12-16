@@ -703,6 +703,7 @@ def discount_surcharge_service(data):
         cmd = cmd[:-2]
         cmd += ETX
 
+        logger.info(f"Discount/surcharge/service data: {json.dumps(data, indent=2)}")
         logger.debug(f"Discount/surcharge/service command: {cmd}")
 
         response = send_to_serial(cmd)
@@ -825,7 +826,42 @@ def add_comment(comment):
         return False
 
 
-def print_document(items, payments, service_charge, tips, trans_num="", is_credit_note=False, discount=None):
+def split_comment_into_lines(comment, max_chars=48):
+    """
+    Split a long comment into multiple lines of max_chars length.
+    Splits on word boundaries to avoid breaking mid-word.
+    Returns a list of strings, each max_chars long.
+    """
+    if not comment or not comment.strip():
+        return []
+
+    words = comment.strip().split()
+    lines = []
+    current_line = ""
+
+    for word in words:
+        # Check if adding this word would exceed max_chars
+        if current_line and len(current_line) + 1 + len(word) <= max_chars:
+            current_line += " " + word
+        elif not current_line and len(word) <= max_chars:
+            current_line = word
+        elif not current_line and len(word) > max_chars:
+            # Single word is too long, split it forcefully
+            current_line = word[:max_chars]
+            words.insert(words.index(word) + 1, word[max_chars:])
+        else:
+            # Current line is full, start a new one
+            lines.append(current_line)
+            current_line = word
+
+    # Add the last line if not empty
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
+
+def print_document(items, payments, service_charge, tips, trans_num="", is_credit_note=False, discount=None, comment=""):
     try:
         config = load_config()
         # page 30 of the protocol
@@ -968,6 +1004,14 @@ def print_document(items, payments, service_charge, tips, trans_num="", is_credi
         # Add TCPOS check number as a comment line before closing
         if trans_num:
             add_comment(f"TCPOS Check #{trans_num}")
+
+        # Add multi-line comment from transaction if present
+        if comment:
+            add_comment("------------------------------------------------")
+            comment_lines = split_comment_into_lines(comment, max_chars=48)
+            for line in comment_lines:
+                add_comment(line)
+            add_comment("------------------------------------------------")
 
         if 1:
             close_document()

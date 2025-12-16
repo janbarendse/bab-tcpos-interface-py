@@ -125,10 +125,15 @@ def check_file_version(xml_json_object):
 
 
 def process_discount_surcharge(item):
+    """
+    Extract item-level discount or surcharge from DiscountValues and subItems.
+    Returns dict with type, amount, percent for printer command 41.
+    Negative amount = discount, positive = surcharge.
+    """
     if "DiscountValues" not in item:
         return None
 
-    # loop through discount values and keys
+    # Find the DiscountValue key
     target_key = ""
     for key, value in item['DiscountValues'].items():
         if key.startswith('DiscountValue-'):
@@ -138,10 +143,59 @@ def process_discount_surcharge(item):
     if target_key == "":
         return None
 
+    discount_value = item['DiscountValues'][target_key]
+    amount_str = discount_value.get("@Amount", "0")
+
+    # Determine if discount (negative) or surcharge (positive)
+    is_discount = amount_str.startswith('-')
+
+    # Strip the sign for encoding
+    amount_abs = amount_str[1:] if is_discount else amount_str
+
+    # Check if amount is zero
+    if float(amount_abs) == 0:
+        return None
+
+    # Try to extract percentage and type from subItems -> TransDiscount
+    percent_value = "00000"
+    is_percent_discount = False
+
+    if "subItems" in item:
+        sub_items = item["subItems"]
+        # Handle both dict and list formats
+        if isinstance(sub_items, dict):
+            for key, value in sub_items.items():
+                if "TransDiscount" in key and isinstance(value, dict):
+                    # Check the discount type
+                    if "Data" in value:
+                        discount_type = value["Data"].get("@Type", "")
+                        is_percent_discount = discount_type in ["PercentDiscount", "PercentSupplement"]
+
+                    if "AppliedThresholds" in value:
+                        thresholds = value["AppliedThresholds"]
+                        # Get the first threshold item
+                        for t_key, t_value in thresholds.items():
+                            if "AppliedThresholdItem" in t_key:
+                                discount_percent = t_value.get("@DiscountPercent", "")
+                                if discount_percent:
+                                    # Percent field is 5 digits: percentage * 100, e.g., 10.50% = "01050"
+                                    percent_value = encode_float_number(discount_percent, 2).zfill(5)
+                                break
+                        break
+
+    # Use amount only - printer doesn't accept both amount and percent together
+    # Include percentage in description for percentage discounts (e.g., "Discount 33%")
+    description = "Item Discount" if is_discount else "Item Surcharge"
+    if is_percent_discount and percent_value != "00000":
+        # Extract percentage value and add to description
+        percent_display = float(percent_value) / 100  # e.g., 03300 -> 33.00
+        description = f"{'Discount' if is_discount else 'Surcharge'} {percent_display:.0f}%"
+
     return {
-        "type": "1",
-        "amount": encode_float_number(item['DiscountValues'][target_key]["@Amount"][1:], 2),
-        "percent": "000",
+        "type": "1" if is_discount else "2",  # "1" = Discount, "2" = Surcharge
+        "description": description,
+        "amount": encode_float_number(amount_abs, 2),
+        "percent": "00000",
     }
 
 
@@ -160,7 +214,7 @@ def get_sub_items(xml_json_object):
                     "tax": "1",  # tax id
                     "discount_type": "0",
                     "discount_amount": "000",
-                    "discount_percent": "000",  # 10.50%
+                    "discount_percent": "00000",  # e.g., 10.50% = "01050"
                 }
 
         """
@@ -222,6 +276,9 @@ def get_sub_items(xml_json_object):
                 unit_price = float(price)
                 total_amount = quantity * unit_price
 
+                # Extract item-level discount/surcharge
+                item_discount_surcharge = process_discount_surcharge(item)
+
                 # Store item data for consolidation by product code
                 if product_code not in items_by_code:
                     items_by_code[product_code] = {
@@ -234,11 +291,13 @@ def get_sub_items(xml_json_object):
                         'unit': encode_measurement_unit(item['measureUnit']['@Code']),
                         'quantities': [],
                         'amounts': [],
+                        'discounts_surcharges': [],  # Track item-level discounts/surcharges
                     }
 
                 # Add this instance to the consolidation tracking
                 items_by_code[product_code]['quantities'].append(quantity)
                 items_by_code[product_code]['amounts'].append(total_amount)
+                items_by_code[product_code]['discounts_surcharges'].append(item_discount_surcharge)
 
         # Process single TransArticle item
         elif type(xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransArticle']) is dict:
@@ -264,9 +323,6 @@ def get_sub_items(xml_json_object):
                         "amount": encode_float_number(item['@_enteredPrice'], 2),
                     })
             else:
-                # Don't apply discount at item level - it will be applied at subtotal level
-                discount_or_surcharge = None
-
                 # Extract product info
                 product_code = item['Data']['@Code']
                 product_title = item['Data']['@Description']
@@ -288,6 +344,9 @@ def get_sub_items(xml_json_object):
                 unit_price = float(item['prices']['index_0']['@Price'])
                 total_amount = quantity * unit_price
 
+                # Extract item-level discount/surcharge
+                item_discount_surcharge = process_discount_surcharge(item)
+
                 # Store item data for consolidation by product code
                 if product_code not in items_by_code:
                     items_by_code[product_code] = {
@@ -300,11 +359,13 @@ def get_sub_items(xml_json_object):
                         'unit': encode_measurement_unit(item['measureUnit']['@Code']),
                         'quantities': [],
                         'amounts': [],
+                        'discounts_surcharges': [],  # Track item-level discounts/surcharges
                     }
 
                 # Add this instance to the consolidation tracking
                 items_by_code[product_code]['quantities'].append(quantity)
                 items_by_code[product_code]['amounts'].append(total_amount)
+                items_by_code[product_code]['discounts_surcharges'].append(item_discount_surcharge)
 
         # Process items by product code (separate paid and voided items)
         for product_code, item_data in items_by_code.items():
@@ -342,7 +403,16 @@ def get_sub_items(xml_json_object):
                 paid_amount = sum(positive_amounts)
                 paid_unit_price = paid_amount / paid_quantity
 
-                sub_items.append({
+                # Get item-level discount/surcharge (if any positive quantity item has one)
+                item_discount = None
+                for i, q in enumerate(item_data['quantities']):
+                    if q > 0 and item_data['discounts_surcharges'][i] is not None:
+                        item_discount = item_data['discounts_surcharges'][i]
+                        break
+
+                # Build item with discount/surcharge included in the item command itself
+                # For command 41: discount_type "0" = none, "1" = discount, "2" = surcharge
+                item_dict = {
                     "type": "02" if item_data['void_item'] else "01",
                     "extra_description_2": line1,
                     "extra_description_1": line2,
@@ -352,10 +422,15 @@ def get_sub_items(xml_json_object):
                     "unit_price": encode_float_number(str(paid_unit_price), 2),
                     "unit": item_data['unit'],
                     "tax": item_data['tax_id'],
-                    "discount_type": "0",
-                    "discount_amount": "000",
-                    "discount_percent": "000",
-                })
+                    "discount_type": item_discount["type"] if item_discount else "0",
+                    "discount_amount": item_discount["amount"] if item_discount else "000",
+                    "discount_percent": item_discount["percent"] if item_discount else "00000",
+                }
+
+                if item_discount:
+                    logger.info(f"Item {product_code} has {'discount' if item_discount['type'] == '1' else 'surcharge'} - type: {item_discount['type']}, amount: {item_discount['amount']}, percent: {item_discount['percent']}")
+
+                sub_items.append(item_dict)
                 logger.info(f"Item {product_code} ({product_title}) - Paid: {paid_quantity}x @ {paid_unit_price}")
 
             # Add voided items (negative quantities) as separate line with price 0
@@ -519,26 +594,57 @@ def get_discount(xml_json_object):
         if "TCPOS.FrontEnd.BusinessLogic.TransDiscount" in xml_json_object[transaction_uuid]['data']['subItems']:
             discount_element = xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransDiscount']
 
-            # Extract the total discount amount (UnitDiscount)
-            discount_amount = discount_element.get('@UnitDiscount', '0')
+            # Check if this is a surcharge or discount based on Type field
+            discount_type_field = discount_element['Data'].get('@Type', '')
+            is_surcharge = discount_type_field in ['AmountSupplement', 'PercentSupplement']
+            is_percent = discount_type_field in ['PercentSupplement', 'PercentDiscount']
 
-            # Strip negative sign for encoding
-            if discount_amount.startswith('-'):
-                discount_amount = discount_amount[1:]
+            if is_percent:
+                # For percentage discounts/surcharges, extract the percentage value
+                # The percentage is in AppliedThresholds/AppliedThresholdItem/@DiscountPercent
+                try:
+                    applied_threshold = discount_element['AppliedThresholds']['TCPOS.FrontEnd.BusinessLogic.TransDiscount_x002B_AppliedThresholdItem']
+                    discount_percent = applied_threshold.get('@DiscountPercent', '0')
 
-            # Check if amount is zero
-            if float(discount_amount) == 0:
-                logger.debug("Discount amount is zero, skipping")
-                return None
+                    # Strip negative sign for encoding
+                    if discount_percent.startswith('-'):
+                        discount_percent = discount_percent[1:]
 
-            discount = {
-                "type": "0",  # Discount type
-                "description": discount_element['Data'].get('@Description', 'Discount'),
-                "amount": encode_float_number(discount_amount, 2),
-                "percent": "000",  # Using amount, not percent
-            }
+                    # Check if percent is zero
+                    if float(discount_percent) == 0:
+                        logger.debug("Discount/surcharge percentage is zero, skipping")
+                        return None
 
-            logger.debug("Transaction discount:")
+                    discount = {
+                        "type": "1" if is_surcharge else "0",  # "1" = Surcharge, "0" = Discount
+                        "description": discount_element['Data'].get('@Description', 'Discount'),
+                        "amount": "000",  # Not using amount for percentage
+                        "percent": encode_float_number(discount_percent, 2),  # Use percentage
+                    }
+                except Exception as e:
+                    logger.error(f"Error extracting percentage: {str(e)}")
+                    return None
+            else:
+                # For fixed amount discounts/surcharges, extract the amount
+                discount_amount = discount_element.get('@UnitDiscount', '0')
+
+                # Strip negative sign for encoding
+                if discount_amount.startswith('-'):
+                    discount_amount = discount_amount[1:]
+
+                # Check if amount is zero
+                if float(discount_amount) == 0:
+                    logger.debug("Discount/surcharge amount is zero, skipping")
+                    return None
+
+                discount = {
+                    "type": "1" if is_surcharge else "0",  # "1" = Surcharge, "0" = Discount
+                    "description": discount_element['Data'].get('@Description', 'Discount'),
+                    "amount": encode_float_number(discount_amount, 2),
+                    "percent": "000",  # Not using percent for fixed amount
+                }
+
+            logger.debug(f"Transaction {'surcharge' if is_surcharge else 'discount'}:")
             logger.debug(json.dumps(discount, indent=4))
 
             return discount
@@ -657,6 +763,9 @@ def tcpos_parse_transaction(filename):
         # Extract TransNum (TCPOS transaction/receipt number)
         trans_num = xml_json_object[transaction_uuid]['data'].get('@TransNum', '')
 
+        # Extract Comment field (for footer notes)
+        comment = xml_json_object[transaction_uuid]['data'].get('@Comment', '')
+
         # Check if this is a void/credit note transaction
         # A credit note has: negative total, OR StornoType="StornoChild", OR DeleteType with negative amounts
         is_credit_note = False
@@ -680,12 +789,12 @@ def tcpos_parse_transaction(filename):
                     is_credit_note = True
                     logger.info(f"Credit note detected via StornoType: {storno_type}")
 
-        return items, payments, service_charge, tips, trans_num, is_credit_note, discount
+        return items, payments, service_charge, tips, trans_num, is_credit_note, discount, comment
 
     except Exception as e:
         logger.error("Error: " + str(e))
 
-    return None, None, None, None, None, False, None
+    return None, None, None, None, None, False, None, None
 
 
 def migrate_renamed_files(transactions_folder):
@@ -750,10 +859,10 @@ def files_watchdog():
                             continue  # Already processed, skip
 
                         logger.debug("File found: " + os.path.join(root, file))
-                        items, payments, service_charge, tips, trans_num, is_credit_note, discount = tcpos_parse_transaction(os.path.join(root, file))
+                        items, payments, service_charge, tips, trans_num, is_credit_note, discount, comment = tcpos_parse_transaction(os.path.join(root, file))
 
                         if items and payments:
-                            cts310ii.print_document(items, payments, service_charge, tips, trans_num, is_credit_note, discount)
+                            cts310ii.print_document(items, payments, service_charge, tips, trans_num, is_credit_note, discount, comment)
 
                             # Create marker file (keep original for TCPOS refunds)
                             with open(marker_processed, 'w') as f:
