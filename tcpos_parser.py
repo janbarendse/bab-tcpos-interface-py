@@ -223,6 +223,13 @@ def get_sub_items(xml_json_object):
         tips = []
         # Dictionary to consolidate items by product code (for handling complimentary items)
         items_by_code = {}
+
+        # Check if transaction has tax exoneration - extract original VAT index
+        transaction_data = xml_json_object[transaction_uuid]['data']
+        original_vat_index = transaction_data.get('@_x003C_RecalcOriginalVATIndex_x003E_k__BackingField', None)
+
+        # Get original VAT rate for net price calculation (vatIndex "1" = 9% tax)
+        original_vat_rate = 0.09 if original_vat_index == "1" else 0.0
         # Process list of TransArticle items
         if type(xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransArticle']) is list:
             for item in xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransArticle']:
@@ -287,7 +294,7 @@ def get_sub_items(xml_json_object):
                         'printout_notes': printout_notes,
                         'void_item': void_item,
                         'tax_exempt': tax_exempt,
-                        'tax_id': tax_ids[item['@_vatPercent']] if not tax_exempt else "0",
+                        'tax_id': "0" if (tax_exempt or item['@_vatPercent'] == '0') else tax_ids[item['@_vatPercent']],
                         'unit': encode_measurement_unit(item['measureUnit']['@Code']),
                         'quantities': [],
                         'amounts': [],
@@ -355,7 +362,7 @@ def get_sub_items(xml_json_object):
                         'printout_notes': printout_notes,
                         'void_item': void_item,
                         'tax_exempt': tax_exempt,
-                        'tax_id': tax_ids[item['@_vatPercent']] if not tax_exempt else "0",
+                        'tax_id': "0" if (tax_exempt or item['@_vatPercent'] == '0') else tax_ids[item['@_vatPercent']],
                         'unit': encode_measurement_unit(item['measureUnit']['@Code']),
                         'quantities': [],
                         'amounts': [],
@@ -403,6 +410,11 @@ def get_sub_items(xml_json_object):
                 paid_amount = sum(positive_amounts)
                 paid_unit_price = paid_amount / paid_quantity
 
+                # Convert gross to net price for tax-exempt items
+                if item_data['tax_id'] == "0" and original_vat_rate > 0:
+                    paid_unit_price = round(paid_unit_price / (1 + original_vat_rate), 2)
+                    logger.info(f"Tax-exempt item: converted gross price to net (÷ {1 + original_vat_rate:.2f}), new price: {paid_unit_price}")
+
                 # Get item-level discount/surcharge (if any positive quantity item has one)
                 item_discount = None
                 for i, q in enumerate(item_data['quantities']):
@@ -431,7 +443,7 @@ def get_sub_items(xml_json_object):
                     logger.info(f"Item {product_code} has {'discount' if item_discount['type'] == '1' else 'surcharge'} - type: {item_discount['type']}, amount: {item_discount['amount']}, percent: {item_discount['percent']}")
 
                 sub_items.append(item_dict)
-                logger.info(f"Item {product_code} ({product_title}) - Paid: {paid_quantity}x @ {paid_unit_price}")
+                logger.info(f"Item {product_code} ({product_title}) - Paid: {paid_quantity}x @ {paid_unit_price}, tax_id: {item_dict['tax']}")
 
             # Add voided items (negative quantities) as separate line with price 0
             if negative_quantities:
