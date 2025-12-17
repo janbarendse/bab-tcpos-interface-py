@@ -1025,6 +1025,316 @@ def print_document(items, payments, service_charge, tips, trans_num="", is_credi
     return None
 
 
+def print_x_report():
+    """
+    Print X Report (daily sales without closing fiscal day)
+    Returns: dict with success status and error message if applicable
+    """
+    try:
+        logger.info("Generating X Report")
+        code = "71"  # X Report command
+        cmd = f"{STX}{code}{ETX}"
+        response = send_to_serial(cmd)
+
+        if is_success_response(response):
+            logger.info("X Report printed successfully")
+            return {"success": True}
+        else:
+            # NAK response usually means: no transactions to report, or printer not ready
+            error_msg = "Printer rejected X-Report (NAK response)"
+            if response == "15":
+                error_msg += " - Likely no transactions to report or fiscal day already closed"
+            logger.warning(error_msg)
+            return {"success": False, "error": error_msg}
+    except Exception as e:
+        logger.error(f"Exception during X Report: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def print_z_report():
+    """
+    Print Z Report (closing fiscal period)
+    Returns: dict with success status and error message if applicable
+    """
+    try:
+        logger.info("Generating Z Report (closing fiscal period)")
+        code = "70"  # Z Report command
+        param = "1"  # Close fiscal day
+        cmd = f"{STX}{code}{FS}{param}{ETX}"
+        response = send_to_serial(cmd)
+
+        if is_success_response(response):
+            logger.info("Z Report printed successfully")
+            return {"success": True}
+        else:
+            logger.error("Failed to print Z Report")
+            return {"success": False, "error": "Failed to print Z Report"}
+    except Exception as e:
+        logger.error(f"Exception during Z Report: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def print_z_report_by_date(start_date, end_date=None):
+    """Print Z Reports for a date range
+
+    Note: This function uses the combined Z reports protocol (0x74)
+    which retrieves ALL Z reports in a date range.
+
+    Args:
+        start_date: Start date for the range (datetime.date object)
+        end_date: End date for the range (defaults to today if not provided)
+
+    Returns:
+        dict: Response with success status, message, and report count
+    """
+    try:
+        if end_date is None:
+            end_date = datetime.date.today()
+
+        start_date_str = start_date.strftime("%d%m%Y")
+        end_date_str = end_date.strftime("%d%m%Y")
+
+        logger.info(f"Generating Z Reports for date range: {start_date_str} - {end_date_str}")
+
+        reserved_field = string_to_hex("0")
+        start_hex = string_to_hex(start_date_str)
+        end_hex = string_to_hex(end_date_str)
+
+        code = "74"  # z_report_by_date command
+        cmd = f"{STX}{code}{FS}{reserved_field}{FS}{start_hex}{FS}{end_hex}{ETX}"
+
+        logger.debug(f"Sending Z report by date command: {cmd}")
+        response = send_to_serial(cmd)
+        logger.debug(f"Received response: {response}")
+
+        if not is_success_response(response):
+            logger.error(f"Failed to initialize Z reports by date - Response: {response}")
+            return {"success": False, "error": f"Failed to initialize Z reports by date. The printer may not have Z reports for this date range, or the dates may be invalid."}
+
+        reports_count = 0
+        while True:
+            get_code = "76"  # get_next_z_report command
+            get_cmd = f"{STX}{get_code}{ETX}"
+            report_response = send_to_serial(get_cmd)
+
+            if report_response and report_response.endswith(NAK):
+                logger.info(f"Retrieved {reports_count} Z report(s)")
+                break
+
+            if is_success_response(report_response):
+                reports_count += 1
+            else:
+                logger.warning("Failed to get next Z report")
+                break
+
+        end_code = "77"  # z_reports_end command
+        end_cmd = f"{STX}{end_code}{ETX}"
+        end_response = send_to_serial(end_cmd)
+
+        if is_success_response(end_response):
+            logger.info("Combined Z reports completed")
+
+        if reports_count > 0:
+            message = f"Printed {reports_count} Z report(s) from {start_date_str} to {end_date_str}"
+            logger.info(message)
+            return {
+                "success": True,
+                "message": message,
+                "start_date": start_date_str,
+                "end_date": end_date_str,
+                "reports_count": reports_count
+            }
+        else:
+            logger.warning(f"No Z reports found for date range {start_date_str} - {end_date_str}")
+            return {
+                "success": False,
+                "error": f"No Z reports found for date range {start_date_str} - {end_date_str}"
+            }
+
+    except Exception as e:
+        logger.error(f"Error printing Z Reports by date: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def print_z_report_by_number(report_number):
+    """Print Z Report by sequential number
+
+    Args:
+        report_number: The sequential Z report number to print
+
+    Returns:
+        dict: Response with success status and message
+    """
+    try:
+        logger.info(f"Generating Z Report by number: {report_number}")
+
+        number_hex = string_to_hex(str(report_number).zfill(4))
+
+        code = "75"  # z_report_by_number command
+        cmd = f"{STX}{code}{FS}{number_hex}{FS}{number_hex}{ETX}"
+        response = send_to_serial(cmd)
+
+        if not is_success_response(response):
+            logger.error("Failed to initialize Z report by number")
+            return {"success": False, "error": "Failed to initialize Z report by number"}
+
+        get_code = "76"  # get_next_z_report command
+        get_cmd = f"{STX}{get_code}{ETX}"
+        report_response = send_to_serial(get_cmd)
+
+        end_code = "77"  # z_reports_end command
+        end_cmd = f"{STX}{end_code}{ETX}"
+        send_to_serial(end_cmd)
+
+        if report_response and report_response.endswith(NAK):
+            logger.warning(f"Z report #{report_number} not found")
+            return {"success": False, "error": f"Z report #{report_number} not found"}
+
+        if is_success_response(report_response):
+            logger.info(f"Z report #{report_number} printed successfully")
+            return {
+                "success": True,
+                "message": f"Z Report #{report_number} printed successfully",
+                "report_number": report_number
+            }
+        else:
+            logger.error("Failed to print Z report by number")
+            return {"success": False, "error": "Failed to print Z report by number"}
+
+    except Exception as e:
+        logger.error(f"Error printing Z Report by number: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def print_z_report_by_number_range(start_number, end_number):
+    """Print Z Reports by sequential number range
+
+    Args:
+        start_number: The starting sequential Z report number
+        end_number: The ending sequential Z report number
+
+    Returns:
+        dict: Response with success status and message
+    """
+    try:
+        logger.info(f"Generating Z Reports by number range: {start_number} to {end_number}")
+
+        start_hex = string_to_hex(str(start_number).zfill(4))
+        end_hex = string_to_hex(str(end_number).zfill(4))
+
+        # Initialize the range
+        code = "75"  # z_report_by_number command
+        cmd = f"{STX}{code}{FS}{start_hex}{FS}{end_hex}{ETX}"
+        response = send_to_serial(cmd)
+
+        if not is_success_response(response):
+            logger.error("Failed to initialize Z report range")
+            return {"success": False, "error": "Failed to initialize Z report range"}
+
+        # Get all reports in the range
+        get_code = "76"  # get_next_z_report command
+        get_cmd = f"{STX}{get_code}{ETX}"
+
+        reports_printed = 0
+        expected_count = end_number - start_number + 1
+
+        for i in range(expected_count):
+            report_response = send_to_serial(get_cmd)
+
+            if report_response and report_response.endswith(NAK):
+                logger.warning(f"Z report not found at position {i+1}")
+                break
+
+            if is_success_response(report_response):
+                reports_printed += 1
+                logger.info(f"Z report {i+1}/{expected_count} printed")
+            else:
+                logger.warning(f"Failed to print Z report at position {i+1}")
+                break
+
+        # End the sequence
+        end_code = "77"  # z_reports_end command
+        end_cmd = f"{STX}{end_code}{ETX}"
+        send_to_serial(end_cmd)
+
+        if reports_printed > 0:
+            logger.info(f"{reports_printed} Z reports printed successfully")
+            return {
+                "success": True,
+                "message": f"{reports_printed} Z Report(s) printed successfully (#{start_number} to #{end_number})",
+                "start_number": start_number,
+                "end_number": end_number,
+                "reports_printed": reports_printed
+            }
+        else:
+            logger.warning("No Z reports found in the specified range")
+            return {"success": False, "error": "No Z reports found in the specified range"}
+
+    except Exception as e:
+        logger.error(f"Error printing Z Reports by range: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def reprint_document(document_number):
+    """Re-print a document/ticket (NO SALE - copy only)
+
+    Command 0xA8 (168 decimal) - Search document/Print Copy
+    Mode='1' (Printed) to print a copy directly
+
+    Args:
+        document_number: The document number to re-print (string or integer)
+                        If string, leading zeros are preserved
+
+    Returns:
+        dict: Response with success status and message
+    """
+    try:
+        # Convert to string and preserve leading zeros
+        doc_num_str = str(document_number)
+        logger.info(f"Re-printing document number: {doc_num_str}")
+
+        code = "A8"
+        mode_hex = string_to_hex("1")  # '1' = Print copy
+        doc_num_hex = string_to_hex(doc_num_str)
+
+        # Try different document types (manual says Field 2 is 2 characters!)
+        # Document types from manual (Section 6.8):
+        # 01 = Invoice Final Consumer
+        # 02 = Invoice Fiscal Credit
+        # 03-09 = Other invoice types
+        # 10 = No Sale document
+        for doc_type in ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]:
+            doc_type_hex = string_to_hex(doc_type)  # Now 2 chars as per manual
+            cmd = f"{STX}{code}{FS}{mode_hex}{FS}{doc_type_hex}{FS}{doc_num_hex}{ETX}"
+
+            logger.debug(f"Trying document type {doc_type}:")
+            logger.debug(f"  Full command: {cmd}")
+
+            response = send_to_serial(cmd)
+
+            if response and not response.endswith(NAK):
+                # Found it!
+                if is_success_response(response):
+                    logger.info(f"Document {doc_num_str} found with type {doc_type} and re-printed successfully")
+                    return {
+                        "success": True,
+                        "message": f"Document {doc_num_str} re-printed successfully (NO SALE)",
+                        "document_number": doc_num_str,
+                        "document_type": doc_type
+                    }
+
+        # Not found with any document type
+        logger.warning(f"Document {doc_num_str} not found (tried all document types 01-10)")
+        return {
+            "success": False,
+            "error": f"Document {doc_num_str} not found (tried all document types)"
+        }
+
+    except Exception as e:
+        logger.error(f"Error re-printing document: {e}")
+        return {"success": False, "error": str(e)}
+
+
 #*END COMMANDS SECTION
 
 

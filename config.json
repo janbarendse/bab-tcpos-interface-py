@@ -1,16 +1,20 @@
 {
-    "pos": {
-        "name": "tcpos",
-        "transactions_folder": "D:\\proyectosPython\\vanessa tcpos printer\\printer_hub\\2xmls"
-    },
-    "printer": {
-        "name": "cts310ii"
-    },
-    "client": {
-        "NKF": "1234567890123456789"
-    },
-    "miscellaneous": {
-        "default_client_name": "Regular client",
-        "default_client_crib": "1000000000"
-    }
+  "pos": {
+    "name": "tcpos",
+    "transactions_folder": "C:\\TCPOS.NET\\TCPOSBKDEMO807\\FrontEnd\\Transactions"
+  },
+  "printer": {
+    "name": "cts310ii"
+  },
+  "client": {
+    "NKF": "1234567890123456789"
+  },
+  "miscellaneous": {
+    "default_client_name": "Regular client",
+    "default_client_crib": "1000000000"
+  },
+  "fiscal_tools": {
+    "Z_report_from": "2024-01-01",
+    "last_z_report_print_time": "2025-12-17T00:06:57.101613"
+  }
 }
