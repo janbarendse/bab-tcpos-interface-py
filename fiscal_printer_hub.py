@@ -1,8 +1,17 @@
+import sys
+import os
+
+# CRITICAL: Enforce Python 3.13 requirement
+if sys.version_info[:2] != (3, 13):
+    print(f"ERROR: This application requires Python 3.13")
+    print(f"Current version: Python {sys.version_info.major}.{sys.version_info.minor}")
+    print(f"\nPlease run with: py -3.13 fiscal_printer_hub.py")
+    input("Press Enter to exit...")
+    sys.exit(1)
+
 import threading
 import time
 import json
-import os
-import sys
 import queue
 from logger_module import logger
 from pystray import Menu as menu, MenuItem as item
@@ -21,10 +30,12 @@ except Exception as e:
 
 
 if getattr(sys, 'frozen', False):
-    base_dir = os.path.dirname(sys.executable)
-
-elif __file__:
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # PyInstaller creates a temp folder and stores path in _MEIPASS
+    resource_dir = sys._MEIPASS  # For bundled resources (logo.png)
+    base_dir = os.path.dirname(sys.executable)  # For user files (config.json, log.log)
+else:
+    resource_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = resource_dir
 
 
 def load_config():
@@ -55,7 +66,7 @@ def print_z_report_menu():
     try:
         logger.info("Z-Report triggered from tray menu")
         import cts310ii
-        result = cts310ii.print_z_report()
+        result = cts310ii.print_z_report(close_fiscal_day=True)
         if result.get("success"):
             logger.info("Z-Report printed successfully from tray menu")
         else:
@@ -74,6 +85,8 @@ def open_fiscal_tools():
 
 
 icon_menu = menu(
+    item('TCpos/BABPrintHub', None, enabled=False),
+    menu.SEPARATOR,
     item('Fiscal Tools', open_fiscal_tools),
     menu.SEPARATOR,
     item('Print X-Report', print_x_report_menu),
@@ -84,7 +97,7 @@ icon_menu = menu(
 
 icon_obj = pystray.Icon(
     name='BAB PrintHub',
-    icon=Image.open(os.path.join(base_dir, 'logo.png')),
+    icon=Image.open(os.path.join(resource_dir, 'logo.png')),
     title='BAB PrintHub',
     menu=icon_menu
 )

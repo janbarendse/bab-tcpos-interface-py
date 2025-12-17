@@ -72,25 +72,20 @@ class FiscalToolsAPI:
             return {"success": False, "error": str(e)}
 
     def print_z_report(self):
-        """Print today's Z report and update config timestamp"""
+        """Print Z report and close fiscal day"""
         try:
-            logger.info("Z-Report (Today) triggered from webview UI")
+            logger.info("Z-Report (Close Fiscal Day) triggered from webview UI")
 
-            # Update timestamp first
-            now = datetime.datetime.now()
-            self.config["fiscal_tools"]["last_z_report_print_time"] = now.isoformat()
-            save_config(self.config)
-
-            # Send command to printer
-            response = cts310ii.print_z_report()
+            # Send command to printer with close_fiscal_day=True
+            # This closes the fiscal period and prints the Z-report
+            response = cts310ii.print_z_report(close_fiscal_day=True)
 
             if response.get("success"):
-                logger.info("Z-Report printed successfully")
-                return {"success": True, "message": "Z Report command sent to printer"}
+                logger.info("Z-Report printed successfully (fiscal day closed)")
+                return {"success": True, "message": "Z Report printed - Fiscal day closed"}
             else:
                 logger.warning(f"Z-Report response: {response.get('error', 'Unknown error')}")
-                # Still return success since command was sent
-                return {"success": True, "message": "Z Report command sent to printer"}
+                return {"success": False, "error": response.get('error', 'Failed to print Z Report')}
         except Exception as e:
             logger.error(f"Error printing Z-Report: {e}")
             return {"success": False, "error": str(e)}
@@ -175,33 +170,9 @@ class FiscalToolsAPI:
         """Return fiscal_tools config section"""
         return self.config.get("fiscal_tools", {})
 
-    def can_print_today_z_report(self):
-        """Check if today's Z-Report can be printed (not already printed today)"""
-        timestamp = self.config.get("fiscal_tools", {}).get("last_z_report_print_time")
-        if timestamp:
-            try:
-                last_time = datetime.datetime.fromisoformat(timestamp)
-                if last_time.date() == datetime.date.today():
-                    return False  # Already printed today
-            except:
-                pass
-        return True  # Can print
-
     def get_min_date(self):
         """Return Z_report_from date"""
         return self.config.get("fiscal_tools", {}).get("Z_report_from", datetime.date.today().strftime("%Y-%m-%d"))
-
-    def get_last_z_report_time(self):
-        """Return formatted last Z-Report print time"""
-        timestamp = self.config.get("fiscal_tools", {}).get("last_z_report_print_time")
-        if timestamp:
-            try:
-                last_time = datetime.datetime.fromisoformat(timestamp)
-                if last_time.date() == datetime.date.today():
-                    return last_time.strftime("%I:%M:%S %p")
-            except:
-                pass
-        return None
 
     def close_window(self):
         """Close the modal window"""
@@ -271,8 +242,7 @@ HTML_TEMPLATE = r'''
                     <div class="bg-red-50 border-2 border-red-600 rounded-xl p-4 shadow-md flex flex-col">
                         <div class="mb-3 flex-grow">
                             <h3 class="text-xl font-bold text-red-800 mb-1">Z Report (Today)</h3>
-                            <p class="text-sm text-gray-600">Closes the fiscal day and generates the daily closing report.</p>
-                            <p id="z-report-status" class="text-xs text-gray-600 mt-2"></p>
+                            <p class="text-sm text-gray-600">Closes the fiscal day and prints the Z Report. Printer will only print if there are transactions.</p>
                         </div>
                         <button id="z-report-btn" onclick="printZReport()" class="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-4 rounded-lg transition duration-150 shadow-lg hover:shadow-xl transform hover:scale-[1.02] mt-auto">
                             <span class="text-lg">Close Fiscal Day - Z Report</span>
@@ -381,9 +351,7 @@ HTML_TEMPLATE = r'''
         async function initializeUI() {
             try {
                 const config = await pywebview.api.get_config();
-                const canPrintZ = await pywebview.api.can_print_today_z_report();
                 const minDate = await pywebview.api.get_min_date();
-                const lastZTime = await pywebview.api.get_last_z_report_time();
 
                 // Set date constraints
                 const today = new Date().toISOString().split('T')[0];
@@ -398,22 +366,6 @@ HTML_TEMPLATE = r'''
                 document.getElementById('end-date').min = minDate;
                 document.getElementById('end-date').max = yesterdayStr;
                 document.getElementById('end-date').value = yesterdayStr;
-
-                // Update Z-Report button state
-                const zReportBtn = document.getElementById('z-report-btn');
-                const zReportStatus = document.getElementById('z-report-status');
-
-                if (!canPrintZ) {
-                    zReportBtn.disabled = true;
-                    zReportBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    if (lastZTime) {
-                        zReportStatus.textContent = `Already printed today at ${lastZTime}`;
-                    } else {
-                        zReportStatus.textContent = 'Already printed today';
-                    }
-                } else {
-                    zReportStatus.textContent = 'Not yet printed today';
-                }
             } catch (error) {
                 console.error('Error initializing UI:', error);
                 showStatus('Error loading configuration', 'error');
@@ -427,8 +379,6 @@ HTML_TEMPLATE = r'''
                 const result = await pywebview.api.print_z_report();
                 if (result.success) {
                     showStatus('✓ ' + result.message, 'success');
-                    // Refresh UI to disable button
-                    await initializeUI();
                 } else {
                     showStatus('✗ ' + result.error, 'error');
                 }

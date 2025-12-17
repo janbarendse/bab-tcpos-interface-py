@@ -7,19 +7,23 @@ echo BAB PrintHub - Build Script
 echo ========================================
 echo.
 
-REM Check if Python is available
-python --version >nul 2>&1
+REM Check if Python 3.13 is available
+py -3.13 --version >nul 2>&1
 if errorlevel 1 (
-    echo ERROR: Python is not installed or not in PATH
+    echo ERROR: Python 3.13 is not installed
+    echo Please install Python 3.13 to build this application
     pause
     exit /b 1
 )
 
+echo Using Python 3.13
+py -3.13 --version
+
 REM Check if PyInstaller is installed
-python -c "import PyInstaller" >nul 2>&1
+py -3.13 -c "import PyInstaller" >nul 2>&1
 if errorlevel 1 (
     echo PyInstaller not found. Installing...
-    pip install pyinstaller
+    py -3.13 -m pip install pyinstaller
 )
 
 echo.
@@ -33,7 +37,7 @@ echo Building BAB PrintHub executable...
 echo This may take a few minutes...
 echo.
 
-pyinstaller --onefile ^
+py -3.13 -m PyInstaller --onefile ^
     --noconsole ^
     --name "BAB_PrintHub" ^
     --icon=logo.png ^

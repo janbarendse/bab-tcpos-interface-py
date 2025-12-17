@@ -272,6 +272,8 @@ def spot_printer():
 #!BEGIN DECODERS SECTION
 def is_success_response(data):
     # check if the data starts with STX and ends with ETX and ACK
+    if data is None:
+        return False
     if data.startswith(STX) and data.endswith(ETX + ACK):
         return True
     if data.startswith(BEL) and data.endswith(ETX + ACK):
@@ -582,6 +584,11 @@ def cancel_document(reason="Completed operation"):
             logger.debug(f"Document canceled successfully, reason: {reason}")
             return True
 
+        # NAK response means no document to cancel (printer in standby) - this is OK
+        if response == NAK:
+            logger.debug(f"No document to cancel (printer in standby)")
+            return True
+
         raise Exception(f"Failed to cancel document, response: {response}")
 
     except Exception as e:
@@ -814,7 +821,8 @@ def add_comment(comment):
         # Send the command to the printer
         response = send_to_serial(cmd)
 
-        if is_success_response(response):
+        # Check for success (either full response or just ACK)
+        if is_success_response(response) or response == ACK:
             logger.debug(f"Comment added successfully")
             return True
         else:
@@ -861,24 +869,46 @@ def split_comment_into_lines(comment, max_chars=48):
     return lines
 
 
-def print_document(items, payments, service_charge, tips, trans_num="", is_credit_note=False, discount=None, comment=""):
+def print_document(items, payments, service_charge, tips, trans_num="", is_credit_note=False, discount=None, comment="", customer=None):
     try:
         config = load_config()
         # page 30 of the protocol
         # Use TransNum as POS reference if available
         pos_reference = trans_num if trans_num else "1001"
 
-        # Document type: "1" = Sale, "3" = Return/Credit Note (per MHI protocol)
-        doc_type = "3" if is_credit_note else "1"
+        # Use customer name and code if provided, otherwise use defaults
+        customer_name = config["miscellaneous"]["default_client_name"]
+        customer_crib = config["miscellaneous"]["default_client_crib"]
+        has_customer = False
+
+        if customer:
+            has_customer = True
+            if customer.get("name"):
+                customer_name = customer["name"]
+                logger.info(f"Using customer name: {customer_name}")
+            if customer.get("code"):
+                customer_crib = customer["code"]
+                logger.info(f"Using customer CRIB: {customer_crib}")
+
+        # Document type based on customer presence and credit note status:
+        # No customer: 1 = Invoice Final Consumer, 3 = Credit Note For Invoice Final Consumer
+        # With customer: 2 = Invoice Fiscal Credit, 4 = Credit Note For Invoice With Fiscal Value
+        if has_customer:
+            doc_type = "4" if is_credit_note else "2"
+        else:
+            doc_type = "3" if is_credit_note else "1"
+
         if is_credit_note:
-            logger.info(f"Processing CREDIT NOTE (void/refund) - TransNum: {trans_num}")
+            logger.info(f"Processing CREDIT NOTE (Type {doc_type}) - TransNum: {trans_num}")
+        else:
+            logger.info(f"Processing INVOICE (Type {doc_type}) - TransNum: {trans_num}")
 
         fiscal_object = {
             "type": doc_type,  # "1" for sale, "3" for return/credit note
             "branch": "9001",
             "POS": pos_reference,  # TCPOS Transaction Number
-            "customer_name": config["miscellaneous"]["default_client_name"],
-            "customer_CRIB": config["miscellaneous"]["default_client_crib"],
+            "customer_name": customer_name,
+            "customer_CRIB": customer_crib,
             "NKF": config["client"]["NKF"],
             "NKF_affected": config["client"]["NKF"],
         }
@@ -925,6 +955,10 @@ def print_document(items, payments, service_charge, tips, trans_num="", is_credi
         if 1:
             document_number = prepare_document(fiscal_object)
             # logger.debug(f"Document number: {document_number}")
+
+        # Add separator line after customer details (header) and before items
+        if has_customer:
+            add_comment("------------------------------------------------")
 
         # time.sleep(1)
 
@@ -1051,24 +1085,40 @@ def print_x_report():
         return {"success": False, "error": str(e)}
 
 
-def print_z_report():
+def print_z_report(close_fiscal_day=False):
     """
-    Print Z Report (closing fiscal period)
+    Print Z Report
+
+    Args:
+        close_fiscal_day: If True, closes the fiscal period (can only be done once per day).
+                         If False, prints a copy without closing (can be done multiple times).
+
     Returns: dict with success status and error message if applicable
     """
     try:
-        logger.info("Generating Z Report (closing fiscal period)")
+        action = "closing fiscal period" if close_fiscal_day else "printing copy"
+        logger.info(f"Generating Z Report ({action})")
         code = "70"  # Z Report command
-        param = "1"  # Close fiscal day
+        param_value = "1" if close_fiscal_day else "0"  # 1 = Close fiscal day, 0 = Print copy only
+        param = string_to_hex(param_value)  # Convert to hex
         cmd = f"{STX}{code}{FS}{param}{ETX}"
         response = send_to_serial(cmd)
 
+        if response is None:
+            error_msg = "Failed to print Z Report - No response from printer"
+            logger.error(error_msg)
+            return {"success": False, "error": error_msg}
+
         if is_success_response(response):
-            logger.info("Z Report printed successfully")
+            logger.info(f"Z Report printed successfully ({action})")
             return {"success": True}
         else:
-            logger.error("Failed to print Z Report")
-            return {"success": False, "error": "Failed to print Z Report"}
+            # Provide helpful error message
+            error_msg = "Failed to print Z Report"
+            if response == NAK or response == "15":
+                error_msg += " - No transactions to report or fiscal day already closed"
+            logger.error(error_msg)
+            return {"success": False, "error": error_msg}
     except Exception as e:
         logger.error(f"Exception during Z Report: {e}")
         return {"success": False, "error": str(e)}

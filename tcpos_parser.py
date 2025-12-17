@@ -595,6 +595,45 @@ def get_service_charge(xml_json_object):
     return None
 
 
+def get_customer_info(xml_json_object):
+    """
+    Extract customer information from TransCustomer element.
+    Returns dict with customer name and code/CRIB, or None if no customer.
+    """
+    logger.debug("Getting customer information...")
+    try:
+        # Check if there is a customer in the transaction
+        if "TCPOS.FrontEnd.BusinessLogic.TransCustomer" in xml_json_object[transaction_uuid]['data']['subItems']:
+            customer_element = xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransCustomer']
+
+            # Extract customer name fields
+            customer_data = customer_element['Data']
+            first_name = customer_data.get('@FirstName', '')
+            description = customer_data.get('@Description', '')  # Usually last name or full name
+            code = customer_data.get('@Code', '')  # Customer code/card number for CRIB
+
+            # Combine first name and description
+            if first_name and description:
+                full_name = f"{first_name} {description}"
+            elif description:
+                full_name = description
+            elif first_name:
+                full_name = first_name
+            else:
+                return None
+
+            logger.info(f"Customer found: {full_name}, Code: {code}")
+            return {
+                "name": full_name,
+                "code": code
+            }
+
+    except Exception as e:
+        logger.error(f"Error extracting customer info: {str(e)}")
+
+    return None
+
+
 def get_discount(xml_json_object):
     """
     Extract transaction-level discount from TransDiscount element.
@@ -685,7 +724,7 @@ def get_payment_details(xml_json_object):
                 payment_details.append({
                     "type": "1",
                     "method": payment_methods[payment['Data']['@Type']],
-                    "description": payment['Data']['@Type'],
+                    "description": " ",
                     "amount": encode_float_number(amount_str, 2),
                 })
 
@@ -699,7 +738,7 @@ def get_payment_details(xml_json_object):
             payment_details.append({
                 "type": "1",
                 "method": payment_methods[xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransPayment']['Data']['@Type']],
-                "description": xml_json_object[transaction_uuid]['data']['subItems']['TCPOS.FrontEnd.BusinessLogic.TransPayment']['Data']['@Type'],
+                "description": " ",
                 "amount": encode_float_number(amount_str, 2),
             })
 
@@ -771,6 +810,7 @@ def tcpos_parse_transaction(filename):
         service_charge = get_service_charge(xml_json_object)
         service_charge = None
         discount = get_discount(xml_json_object)
+        customer = get_customer_info(xml_json_object)
 
         # Extract TransNum (TCPOS transaction/receipt number)
         trans_num = xml_json_object[transaction_uuid]['data'].get('@TransNum', '')
@@ -801,12 +841,12 @@ def tcpos_parse_transaction(filename):
                     is_credit_note = True
                     logger.info(f"Credit note detected via StornoType: {storno_type}")
 
-        return items, payments, service_charge, tips, trans_num, is_credit_note, discount, comment
+        return items, payments, service_charge, tips, trans_num, is_credit_note, discount, comment, customer
 
     except Exception as e:
         logger.error("Error: " + str(e))
 
-    return None, None, None, None, None, False, None, None
+    return None, None, None, None, None, False, None, None, None
 
 
 def migrate_renamed_files(transactions_folder):
@@ -871,10 +911,10 @@ def files_watchdog():
                             continue  # Already processed, skip
 
                         logger.debug("File found: " + os.path.join(root, file))
-                        items, payments, service_charge, tips, trans_num, is_credit_note, discount, comment = tcpos_parse_transaction(os.path.join(root, file))
+                        items, payments, service_charge, tips, trans_num, is_credit_note, discount, comment, customer = tcpos_parse_transaction(os.path.join(root, file))
 
                         if items and payments:
-                            cts310ii.print_document(items, payments, service_charge, tips, trans_num, is_credit_note, discount, comment)
+                            cts310ii.print_document(items, payments, service_charge, tips, trans_num, is_credit_note, discount, comment, customer)
 
                             # Create marker file (keep original for TCPOS refunds)
                             with open(marker_processed, 'w') as f:
